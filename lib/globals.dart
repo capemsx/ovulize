@@ -1,7 +1,9 @@
 import 'dart:ui';
 
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:ovulize/backend/providers/cycleprovider.dart';
 import 'package:ovulize/backend/providers/dataprovider.dart';
+import 'package:ovulize/backend/providers/thermoprovider.dart';
 import 'package:ovulize/backend/types/cycle.dart';
 import 'package:ovulize/backend/types/cyclephase.dart';
 
@@ -22,6 +24,7 @@ double appBarHeight = 60;
 //PROVIDERS
 CycleProvider cycleProvider = CycleProvider();
 DataProvider dataProvider = DataProvider();
+ThermoProvider thermoProvider = ThermoProvider();
 
 
 //RUNTIME VALUES

@@ -32,6 +32,7 @@ class LauncherPageState extends State<LauncherPage> {
     instance.updateConfiguration(
         cycleLength: 28, periodDuration: 5, userId: "1");
     await dataProvider.init();
+    await thermoProvider.init();
     currentOvulationCycle = await cycleProvider.getCurrentCycle();
     currentCyclePhase = await cycleProvider.getCurrentPhase();
     return;

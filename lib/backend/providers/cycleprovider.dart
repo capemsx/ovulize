@@ -87,7 +87,7 @@ class CycleProvider {
           durationDays: cycleDurations[CyclePhaseType.ovulation] ?? 3),
       CyclePhase(
           type: CyclePhaseType.luteal,
-          durationDays: cycleDurations[CyclePhaseType.luteal] ?? 13),
+          durationDays: cycleDurations[CyclePhaseType.luteal] ?? 6),
     ];
 
     return OvulationCycle(
