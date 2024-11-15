@@ -3,8 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:line_icons/line_icons.dart';
 import 'package:ovulize/backend/types/tabpage.dart';
 import 'package:ovulize/frontend/pages/main/dashboard.dart';
-import 'package:ovulize/frontend/pages/main/measure.dart';
-import 'package:ovulize/frontend/pages/sub/devices.dart';
+import 'package:ovulize/frontend/pages/sub/measure.dart';
 import 'package:ovulize/frontend/pages/main/settings.dart';
 import 'package:ovulize/frontend/widgets/appbar.dart';
 import 'package:ovulize/globals.dart';
@@ -28,7 +27,6 @@ class BarWrapperState extends State<BarWrapper> {
   Widget build(BuildContext context) {
     return Expanded(
       child: PersistentTabView(
-        
           tabs: [
             for (TabPage page in pages)
               PersistentTabConfig(
@@ -57,7 +55,9 @@ class BarWrapperState extends State<BarWrapper> {
                             LineIcons.thermometer34Full,
                             color: primaryColor,
                           ),
-                          onPressed: () {}),
+                          onPressed: () {
+                            Navigator.of(context).push(MaterialPageRoute(builder: (ctx) => MeasurePage()));
+                          }),
                       Visibility(
                         visible:
                             thermoProvider.foundOvulizeSensors.value.isNotEmpty,
@@ -77,8 +77,8 @@ class BarWrapperState extends State<BarWrapper> {
                                     blurRadius: 15),
                               ],
                               borderRadius: BorderRadius.circular(16),
-                              color: Colors
-                                  .green.withOpacity(0.6), // This would be color of the Badge
+                              color: Colors.green.withOpacity(
+                                  0.6), // This would be color of the Badge
                             ),
                           ),
                         ),
@@ -92,12 +92,12 @@ class BarWrapperState extends State<BarWrapper> {
           backgroundColor: backgroundColor,
           gestureNavigationEnabled: true,
           navBarBuilder: (navBarConfig) => Style10BottomNavBar(
-            navBarDecoration: NavBarDecoration(color: barColor, boxShadow: [
-              BoxShadow(
-                                    color: Colors.grey.withOpacity(0.1),
-                                    spreadRadius: 1,
-                                    blurRadius: 15),
-            ]),
+                navBarDecoration: NavBarDecoration(color: barColor, boxShadow: [
+                  BoxShadow(
+                      color: Colors.grey.withOpacity(0.1),
+                      spreadRadius: 1,
+                      blurRadius: 15),
+                ]),
                 navBarConfig: navBarConfig,
               )),
     );
