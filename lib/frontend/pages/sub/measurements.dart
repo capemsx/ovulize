@@ -7,16 +7,16 @@ import 'package:menstrual_cycle_widget/ui/menstrual_cycle_phase_view.dart';
 import 'package:ovulize/globals.dart';
 import 'package:package_info/package_info.dart';
 
-class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key});
+class Measurements extends StatefulWidget {
+  const Measurements({super.key});
 
 
 
   @override
-  State<SettingsPage> createState() => SettingsPageState();
+  State<Measurements> createState() => MeasurementsState();
 }
 
-class SettingsPageState extends State<SettingsPage> {
+class MeasurementsState extends State<Measurements> {
 
   @override
   void initState() {
@@ -30,12 +30,12 @@ class SettingsPageState extends State<SettingsPage> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         automaticallyImplyLeading: true,
-        /*leading: IconButton(
+        leading: IconButton(
           icon: Icon(LineIcons.alternateLongArrowLeft),
           onPressed: () {
             Navigator.pop(context);
           },
-        ),*/
+        ),
         title: Text(
           "Informationen"
           

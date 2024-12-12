@@ -1,10 +1,15 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:line_icons/line_icons.dart';
 import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
 import 'package:menstrual_cycle_widget/ui/menstrual_cycle_phase_view.dart';
 import 'package:ovulize/backend/types/cycle.dart';
 import 'package:ovulize/backend/types/cyclephase.dart';
 import 'package:ovulize/backend/types/cyclephasetype.dart';
+import 'package:ovulize/frontend/widgets/cyclecell.dart';
 import 'package:ovulize/globals.dart';
 
 class CycleWheelWidget extends StatefulWidget {
@@ -15,46 +20,82 @@ class CycleWheelWidget extends StatefulWidget {
 }
 
 class CycleWheelWidgetState extends State<CycleWheelWidget> {
+  int pastDayPreview = 30;
+  int futureDayPreview = 30;
+  PageController cycleWheelController = PageController(
+      viewportFraction: 60 /
+          MediaQueryData.fromWindow(WidgetsBinding.instance.window).size.width);
+  int currentDayIndex = 0;
+
   @override
   void initState() {
     super.initState();
+    cycleWheelController.addListener(() {
+      int newDayIndex = cycleWheelController.page?.round() ?? 0;
+      if (newDayIndex != currentDayIndex) {
+        setState(() {
+          currentDayIndex = newDayIndex;
+        });
+        HapticFeedback.heavyImpact();
+      }
+    });
+    animateToCurrentDay();
+  }
+
+  void animateToCurrentDay() async {
+    await Future.delayed(Duration(milliseconds: 50)); //wait for visibility of animation to user
+    cycleWheelController.animateToPage(pastDayPreview, duration: Duration(milliseconds: 500), curve: Curves.easeOutCubic);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
+    return Center(
+        child: Column(
       children: [
-        Center(
-          child: MenstrualCyclePhaseView(
-            viewType: MenstrualCycleViewType.circleText,
-            centralCircleBackgroundColor: backgroundColor,
-            phaseTextBoundaries: PhaseTextBoundaries.outside,
-            outsideTextCharSpace: 3,
-            arcStrokeWidth: 200,
-            size: 300,
-            centralCircleSize: 110,
-            selectedDayCircleSize: 23,
-            totalCycleDays: getTotalCycleDays(),
-            selectedDay: getCurrentCycleDay(),
-            follicularDayCount: getDayCountForPhase(CyclePhaseType.follicular),
-            menstruationDayCount: getDayCountForPhase(CyclePhaseType.menstruation),
-            ovulationDayCount: getDayCountForPhase(CyclePhaseType.ovulation),
-            ovulationBackgroundColor: ovulationColor,
-            follicularBackgroundColor: follicularColor,
-            menstruationBackgroundColor: menstruationColor,
-            lutealPhaseBackgroundColor: lutealColor,
-            ovulationTextColor: ovulationColor,
-            follicularTextColor: follicularColor,
-            menstruationTextColor: menstruationColor,
-            lutealPhaseTextColor: lutealColor,
-            
-            //luteal day count represents the difference between total day count and the sum of the other phases
+        Icon(
+          LineIcons.alternateLongArrowDown,
+          color: Colors.black45,
+        ),
+        SizedBox(
+          height: 100,
+          width: MediaQuery.of(context).size.width,
+          child: ShaderMask(
+            shaderCallback: (Rect rect) {
+              return LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  backgroundColor,
+                  Colors.transparent,
+                  Colors.transparent,
+                  backgroundColor
+                ],
+                stops: [
+                  0.0,
+                  0.2,
+                  0.8,
+                  1.0
+                ], // 10% purple, 80% transparent, 10% purple
+              ).createShader(rect);
+            },
+            blendMode: BlendMode.dstOut,
+            child: PageView(
+              controller: cycleWheelController,
+              scrollDirection: Axis.horizontal,
+              children: [
+                for (int i = 0; i != pastDayPreview + futureDayPreview; i++)
+                  CycleCellWidget(
+                    date: DateTime.now().copyWith(day: DateTime.now().day - pastDayPreview + i),
+                    phase: CyclePhaseType.menstruation,
+                    temperature: Random().nextDouble() * 36.6,
+                    trailingSeperator: i != pastDayPreview + futureDayPreview,
+                  )
+              ],
+            ),
           ),
         ),
-        buildTextDescriptor()
       ],
-    );
+    ));
   }
 
   Widget buildTextDescriptor() {

@@ -2,6 +2,8 @@ PODS:
   - flutter_blue_plus (0.0.1):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
+  - package_info (0.0.1):
+    - FlutterMacOS
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -12,6 +14,7 @@ PODS:
 DEPENDENCIES:
   - flutter_blue_plus (from `Flutter/ephemeral/.symlinks/plugins/flutter_blue_plus/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
+  - package_info (from `Flutter/ephemeral/.symlinks/plugins/package_info/macos`)
   - path_provider_foundation (from `Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin`)
   - sqflite_darwin (from `Flutter/ephemeral/.symlinks/plugins/sqflite_darwin/darwin`)
 
@@ -20,6 +23,8 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_blue_plus/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
+  package_info:
+    :path: Flutter/ephemeral/.symlinks/plugins/package_info/macos
   path_provider_foundation:
     :path: Flutter/ephemeral/.symlinks/plugins/path_provider_foundation/darwin
   sqflite_darwin:
@@ -28,6 +33,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   flutter_blue_plus: e2868679021f19d12a8c0c58a33f1df66ec7fa6a
   FlutterMacOS: 8f6f14fa908a6fb3fba0cd85dbd81ec4b251fb24
+  package_info: 6eba2fd8d3371dda2d85c8db6fe97488f24b74b2
   path_provider_foundation: 2b6b4c569c0fb62ec74538f866245ac84301af46
   sqflite_darwin: 5a7236e3b501866c1c9befc6771dfd73ffb8702d
 

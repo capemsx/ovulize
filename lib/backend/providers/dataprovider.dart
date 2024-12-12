@@ -18,4 +18,15 @@ class DataProvider {
   Future<List<Map<String, dynamic>>> getTemperatureData() async {
     return await db.query('TemperatureData', orderBy: 'timestamp ASC');
   }
+  Future<void> insertTemperatureData(
+      DateTime timestamp, double temperatureValue) async {
+    await db.insert(
+      'TemperatureData',
+      {'timestamp': timestamp.toIso8601String(), 'temperature_value': temperatureValue},
+    );
+  }
+
+  Future<void> close() async {
+    await db.close();
+  }
 }

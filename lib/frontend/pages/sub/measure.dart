@@ -22,7 +22,12 @@ class MeasurePage extends StatefulWidget {
 class MeasurePageState extends State<MeasurePage> {
   CarouselSliderController carouselSliderController =
       CarouselSliderController();
+  static int maxMeasurementsCount = 25;
   bool connected = false;
+  double measurementProgress = 0;
+  List<double> measuredValues = [];
+  double finalValue = 0;
+  bool done = false;
 
   @override
   void initState() {
@@ -81,8 +86,10 @@ class MeasurePageState extends State<MeasurePage> {
                                 height: 60,
                                 onPressed: () async {
                                   setPage(2);
-                                  await Future.delayed(Duration(milliseconds: 500)); //wait for animation to be finished
-                                  thermoProvider.startStream();
+                                  await Future.delayed(Duration(
+                                      milliseconds:
+                                          500)); //wait for animation to be finished
+                                  startMeasurement();
                                 },
                                 child: Text("Start")),
                           ),
@@ -90,31 +97,107 @@ class MeasurePageState extends State<MeasurePage> {
                       ),
                       Stack(
                         children: [
-                          
-                          
-                      
-                
-                            Center(
-                              child: StreamBuilder(
-                                stream:
-                                    thermoProvider.getTemperatureStream(),
-                                builder: (context, snapshot) {
-                                  return Text(
-                                      (snapshot.data?.toStringAsFixed(2) ?? "--.--") + "°",
-                                      style: TextStyle(
-                                          color: primaryColor,
-                                          shadows: [
-                                            Shadow(
-                                                color: primaryColor.withOpacity(0.3),
-                                                offset: Offset(0, 0),
-                                                blurRadius: 6)
-                                          ],
-                                          fontFamily: "Gilroy-Bold",
-                                          fontSize: 60),);
-                                },
-                              ),
+                          Container(
+                              decoration: BoxDecoration(
+                            gradient: RadialGradient(
+                                radius: 0.5 * measurementProgress,
+                                colors: <Color>[
+                                  primaryColor
+                                      .withOpacity(0.4 * measurementProgress),
+                                  primaryColor.withOpacity(0)
+                                ]),
+                          )),
+                          Center(
+                            child: StreamBuilder(
+                              stream: thermoProvider.getTemperatureStream(),
+                              builder: (context, snapshot) {
+                                return Text(
+                                  (snapshot.data?.toStringAsFixed(2) ??
+                                          "--.--") +
+                                      "°",
+                                  style: TextStyle(
+                                      color: primaryColor,
+                                      shadows: [
+                                        Shadow(
+                                            color:
+                                                primaryColor.withOpacity(0.3),
+                                            offset: Offset(0, 0),
+                                            blurRadius: 6)
+                                      ],
+                                      fontFamily: "Gilroy-Bold",
+                                      fontSize: 50 + (5 * measurementProgress)),
+                                );
+                              },
                             ),
-                            
+                          )
+                        ],
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Positioned(
+                                right: 20,
+                                child: Icon(LineIcons.thermometer34Full, color: primaryColor, size: 40,)),
+                              Text(
+                                (finalValue.toStringAsFixed(2) ?? "--.--") + "°",
+                                style: TextStyle(
+                                    color: primaryColor,
+                                    shadows: [
+                                      Shadow(
+                                          color: primaryColor.withOpacity(0.3),
+                                          offset: Offset(0, 0),
+                                          blurRadius: 6)
+                                    ],
+                                    fontFamily: "Gilroy-Bold",
+                                    fontSize: 50 + (5 * measurementProgress)),
+                              ),
+                            ],
+                          ),
+                          SizedBox(
+                              height: MediaQuery.of(context).size.height / 4),
+                          TextButton(
+                            child: Text(
+                              "Erneut messen",
+                              style: TextStyle(color: primaryColor),
+                            ),
+                            onPressed: () {
+                              
+
+                              setPage(1);
+                                setState(() {
+                                measuredValues = [];
+                                measurementProgress = 0;
+                                finalValue = 0;
+                              });
+
+                              
+                            },
+                          ),
+                          SizedBox(
+                            height: 10,
+                          ),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: MaterialButton(
+                                color: primaryColor,
+                                textColor: backgroundColor,
+                                minWidth: 180,
+                                height: 60,
+                                onPressed: () async {
+                                  await dataProvider.insertTemperatureData(DateTime.now(), finalValue);
+                                  setState(() {
+                                    done = true;
+                                  });
+                                  await Future.delayed(Duration(
+                                      milliseconds:
+                                          500));
+                                  Navigator.of(context).pop();
+                                },
+                                child: done ? Icon(Icons.check) : Text("Speichern")),
+                          ),
                         ],
                       )
                     ],
@@ -136,19 +219,14 @@ class MeasurePageState extends State<MeasurePage> {
                         width: 10,
                         height: 10,
                         decoration: BoxDecoration(
-                          color:
-                              connected
-                                  ? Colors.green
-                                  : Colors.orange,
+                          color: connected ? Colors.green : Colors.orange,
                           shape: BoxShape.circle,
                         ),
                       ),
                       SizedBox(
                         width: 5,
                       ),
-                      Text(connected
-                          ? "Connected!"
-                          : "Connecting...")
+                      Text(connected ? "Connected" : "Connecting...")
                     ],
                   ),
                 )),
@@ -169,6 +247,56 @@ class MeasurePageState extends State<MeasurePage> {
         ),
       ),
     );
+  }
+
+  double getBalancedTemperature(List<double> temperatures) {
+    // 1. excluding extreme values
+    final filteredTemps =
+        temperatures.where((temp) => temp >= 35.0 && temp <= 42.0).toList();
+    if (filteredTemps.isEmpty) {
+      throw Exception("Invalid measurement.");
+    }
+
+    // 2. Sorting for calculating median
+    filteredTemps.sort();
+
+    // Calculating median
+    double median;
+    int middle = filteredTemps.length ~/ 2;
+    if (filteredTemps.length % 2 == 1) {
+      median = filteredTemps[middle];
+    } else {
+      median = (filteredTemps[middle - 1] + filteredTemps[middle]) / 2.0;
+    }
+
+    // 3. Removing values 0.2°C away from median
+    final refinedTemps =
+        filteredTemps.where((temp) => (temp - median).abs() <= 0.2).toList();
+
+    // 4. Calculating final average
+    double average = refinedTemps.reduce((a, b) => a + b) / refinedTemps.length;
+
+    return average;
+  }
+
+  void startMeasurement() {
+    thermoProvider.startStream();
+
+    thermoProvider.getTemperatureStream().listen((value) {
+      if (measuredValues.length >= maxMeasurementsCount) {
+        thermoProvider.stopStream();
+        getBalancedTemperature(measuredValues);
+        setState(() {
+          finalValue = getBalancedTemperature(measuredValues);
+        });
+        setPage(3);
+        return;
+      }
+      setState(() {
+        measuredValues.add(value);
+        measurementProgress = measuredValues.length / maxMeasurementsCount;
+      });
+    });
   }
 
   void checkForConnectionStateAsync() async {

@@ -22,6 +22,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Ovulize',
+      
       theme: ThemeData(
           iconTheme: IconThemeData(color: primaryColor),
           primaryIconTheme: IconThemeData(color: primaryColor),
