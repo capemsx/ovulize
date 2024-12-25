@@ -8,6 +8,7 @@ enum CyclePhaseType {
   follicular,
   ovulation,
   luteal,
+  uncertain,
   test;
 
   @override
@@ -21,6 +22,8 @@ enum CyclePhaseType {
         return 'Ovulation';
       case CyclePhaseType.test:
         return 'Test';
+      case CyclePhaseType.uncertain:
+        return 'Uncertain';
       case CyclePhaseType.luteal:
         return 'Luteal phase';
     }
@@ -38,6 +41,8 @@ enum CyclePhaseType {
         return lutealColor;
       case CyclePhaseType.test:
         return Colors.grey;
+      case CyclePhaseType.uncertain:
+        return Colors.black;
       default:
         return Colors.grey;
     }

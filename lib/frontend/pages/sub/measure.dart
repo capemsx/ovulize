@@ -8,8 +8,6 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:line_icons/line_icon.dart';
 import 'package:line_icons/line_icons.dart';
 import 'package:lottie/lottie.dart';
-import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
-import 'package:menstrual_cycle_widget/ui/menstrual_cycle_phase_view.dart';
 import 'package:ovulize/globals.dart';
 
 class MeasurePage extends StatefulWidget {

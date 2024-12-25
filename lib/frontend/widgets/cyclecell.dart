@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
-import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
-import 'package:menstrual_cycle_widget/ui/menstrual_cycle_phase_view.dart';
 import 'package:ovulize/backend/types/cycle.dart';
 import 'package:ovulize/backend/types/cyclephase.dart';
 import 'package:ovulize/backend/types/cyclephasetype.dart';
@@ -39,13 +37,26 @@ class CycleCellWidgetState extends State<CycleCellWidget> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(DateFormat("MMM").format(widget.date).toUpperCase(), style: TextStyle(color: Colors.black45, fontSize: 12, letterSpacing: 2),),
+              GestureDetector(
+                onTap: () {
+
+                },
+                child: Stack(
+                  children: [
+                    Text("Hallo"),
+                    Container(
+                      decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(20)),
+                    )
+                  ],
+                ),
+              ),
+              
               Container(
                 alignment: Alignment.center,
                 decoration: BoxDecoration(shape: BoxShape.circle, color: widget.phase.getColor()),
                 width: 30,
                 height: 30,
                 child: Text(widget.date.day.toString()),
-                
               ),
             ],
           )

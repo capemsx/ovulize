@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
-import 'package:menstrual_cycle_widget/ui/menstrual_cycle_phase_view.dart';
 import 'package:ovulize/frontend/pages/main/barwrapper.dart';
 import 'package:ovulize/globals.dart';
 
@@ -28,9 +26,6 @@ class LauncherPageState extends State<LauncherPage> {
 
   Future<void> startup() async {
     await Future.delayed(Duration(seconds: 1)); //VISUAL REASON FOR DELAY
-    final instance = MenstrualCycleWidget.instance!;
-    instance.updateConfiguration(
-        cycleLength: 28, periodDuration: 5, userId: "1");
     await dataProvider.init();
     await thermoProvider.init();
     currentOvulationCycle = await cycleProvider.getCurrentCycle();

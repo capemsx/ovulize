@@ -1,146 +1,76 @@
+import 'dart:math';
+
+import 'package:ml_algo/ml_algo.dart';
+import 'package:ml_dataframe/ml_dataframe.dart';
 import 'package:ovulize/backend/types/cycle.dart';
 import 'package:ovulize/backend/types/cyclephase.dart';
 import 'package:ovulize/backend/types/cyclephasetype.dart';
 import 'package:ovulize/globals.dart';
 
-class CycleProvider {
-  // Berechnet durchschnittliche Zyklus- und Phasendauern aus individuellen Daten
-  Future<Map<String, dynamic>> estimateCycleDurations() async {
-    final data = await dataProvider.getTemperatureData();
-    int totalDays = data.length;
-    int estimatedCycleLength = 0;
+class TemperatureDay {
+  final DateTime date;
+  final double temperature;
+  final double? avgLast5Days;
+  final double? trendLast5Days;
+  CyclePhaseType cyclePhase;
 
-    int normalCycleDays = 24;
-    int ovulationDays = 4;
-
-    if (totalDays >= 28) {
-      int cycleLengthSum = 0;
-      int cycleCount = 0;
-      int normalCycleCount = 0, ovulationCount = 0;
-
-      DateTime? lastCycleStart;
-      double avgTemp = 0;
-      double tempSum = 0;
-
-      // Durchschnittliche Temperatur berechnen
-      for (var record in data) {
-        double temp = record['temperature_value'];
-        tempSum += temp;
-      }
-      avgTemp = tempSum / totalDays;
-
-      // Schwellenwert für Eisprung basierend auf historischem Durchschnitt
-      double ovulationThreshold =
-          avgTemp + 0.3; // z. B. 0,3°C über dem Durchschnitt
-
-      for (var record in data) {
-        double temp = record['temperature_value'];
-        DateTime date = DateTime.parse(record['timestamp']);
-
-        if (temp >= ovulationThreshold) {
-          ovulationCount++;
-        } else {
-          normalCycleCount++;
-          if (lastCycleStart != null) {
-            cycleLengthSum += date.difference(lastCycleStart).inDays;
-            cycleCount++;
-          }
-          lastCycleStart = date;
-        }
-      }
-
-      // Durchschnittliche Zykluslänge berechnen
-      if (cycleCount > 0) {
-        estimatedCycleLength = (cycleLengthSum / cycleCount).round();
-      }
-
-      // Phasendauern berechnen
-      normalCycleDays =
-          ((normalCycleCount / totalDays) * estimatedCycleLength).round();
-      ovulationDays =
-          ((ovulationCount / totalDays) * estimatedCycleLength).round();
-    }
-
-    return {
-      'cycleLength': estimatedCycleLength,
-      'normalCycleDays': normalCycleDays,
-      'ovulationDays': ovulationDays,
-    };
-  }
-
-  Future<OvulationCycle> getCurrentCycle() async {
-    final cycleDurations = await estimateCycleDurations();
-    final cycleLength = cycleDurations['cycleLength'] ?? 28;
-
-    DateTime cycleStart = DateTime.now().subtract(Duration(days: cycleLength));
-    DateTime cycleEnd = cycleStart.add(Duration(days: cycleLength));
-
-    List<CyclePhase> phases = [
-      CyclePhase(
-          type: CyclePhaseType.menstruation,
-          durationDays: cycleDurations[CyclePhaseType.menstruation] ?? 5),
-      CyclePhase(
-          type: CyclePhaseType.follicular,
-          durationDays: cycleDurations[CyclePhaseType.follicular] ?? 9),
-      CyclePhase(
-          type: CyclePhaseType.ovulation,
-          durationDays: cycleDurations[CyclePhaseType.ovulation] ?? 3),
-      CyclePhase(
-          type: CyclePhaseType.luteal,
-          durationDays: cycleDurations[CyclePhaseType.luteal] ?? 6),
-    ];
-
-    return OvulationCycle(
-      phases: phases,
-      startDate: cycleStart,
-      endDate: cycleEnd,
-    );
-  }
-
-  Future<CyclePhase> getCurrentPhase() async {
-    OvulationCycle currentCycle = await getCurrentCycle();
-    DateTime now = DateTime.now();
-    int daysSinceStart = now.difference(currentCycle.startDate).inDays;
-    int daysSincePhaseStart = 0;
-
-    for (CyclePhase phase in currentCycle.phases) {
-      if (daysSincePhaseStart + phase.durationDays > daysSinceStart) {
-        return phase;
-      }
-      daysSincePhaseStart += phase.durationDays;
-    }
-    return CyclePhase(
-        type: CyclePhaseType.menstruation, durationDays: 0); // Fallback
-  }
-
-  // Berechnet zukünftige Zyklen für bis zu 6 Monate
-  Future<List<OvulationCycle>> getFutureCycles({int monthsAhead = 6}) async {
-    final List<OvulationCycle> futureCycles = [];
-    DateTime cycleStart = DateTime.now();
-
-    for (int i = 0; i < monthsAhead; i++) {
-      final cycle = await getCurrentCycle();
-      futureCycles.add(cycle);
-      cycleStart = cycle.endDate.add(Duration(days: 1));
-    }
-
-    return futureCycles;
-  }
-
-  Future<CyclePhaseType> getCyclePhaseTypeForDate(DateTime date) async {
-    List<OvulationCycle> futureCycles = await getFutureCycles();
-    for (var cycle in futureCycles) {
-      if (date.isAfter(cycle.startDate) && date.isBefore(cycle.endDate)) {
-        int daysSinceStart = date.difference(cycle.startDate).inDays;
-        int daysSincePhaseStart = 0;
-        for (CyclePhase phase in cycle.phases) {
-          if (daysSincePhaseStart + phase.durationDays > daysSinceStart) {
-            return phase.type;
-          }
-          daysSincePhaseStart += phase.durationDays;
-        }
-    }
-  }
-  return CyclePhaseType.menstruation; // Fallback
+  TemperatureDay({
+    required this.date,
+    required this.temperature,
+    this.avgLast5Days,
+    this.trendLast5Days,
+    this.cyclePhase = CyclePhaseType.uncertain,
+  });
 }
+
+class CyclePhasePredictor {
+  late final LogisticRegressor model;
+
+  CyclePhasePredictor() {
+    // Train a model with more features and dummy data as an example
+    final data = DataFrame([
+      ['temperature', 'avgLast5Days', 'trendLast5Days', 'phase'],
+      [36.3, null, null, 0], // menstruation
+      [36.4, null, null, 0],
+      [36.6, 36.5, 0.1, 1], // follicular
+      [36.4, 36.5, -0.1, 2], // ovulation
+      [36.8, 36.7, 0.2, 3], // luteal
+      [37.1, 36.9, 0.3, 4], // pregnancy
+    ], headerExists: true);
+
+    model = LogisticRegressor(data, "phase", optimizerType: LinearOptimizerType.gradient);
+  }
+
+  List<TemperatureDay> predictCyclePhases(List<TemperatureDay> historicalData) {
+    for (int i = 0; i < historicalData.length; i++) {
+      final currentDay = historicalData[i];
+
+      // Calculate additional features (average and trend of last 5 days)
+      final recentData = historicalData.sublist(max(0, i - 5), i);
+      final avgLast5Days = recentData.isNotEmpty
+          ? recentData.map((d) => d.temperature).reduce((a, b) => a + b) / recentData.length
+          : null;
+      final trendLast5Days = recentData.length > 1
+          ? recentData.last.temperature - recentData.first.temperature
+          : null;
+
+      final prediction = model.predict(DataFrame([
+        ['temperature', 'avgLast5Days', 'trendLast5Days'],
+        [currentDay.temperature, avgLast5Days, trendLast5Days],
+      ]));
+
+      final predictedPhase = prediction.rows.first.first.toInt();
+      currentDay.cyclePhase = CyclePhaseType.values[predictedPhase];
+    }
+
+    return historicalData;
+  }
+}
+
+
+class CycleProvider {
+
+
+
+  
 }

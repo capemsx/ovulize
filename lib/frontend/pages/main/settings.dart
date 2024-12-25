@@ -2,8 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:line_icons/line_icons.dart';
-import 'package:menstrual_cycle_widget/menstrual_cycle_widget.dart';
-import 'package:menstrual_cycle_widget/ui/menstrual_cycle_phase_view.dart';
 import 'package:ovulize/globals.dart';
 import 'package:package_info/package_info.dart';
 
