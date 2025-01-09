@@ -39,6 +39,31 @@ class _MeasurementsPageState extends State<MeasurementsPage> {
   void dispose() {
     super.dispose();
   }
+  /*Widget buildTemperatureChart() {
+    return Container(
+      height: 300,
+      padding: const EdgeInsets.all(8.0),
+      child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SfCartesianChart(
+            primaryXAxis: DateTimeAxis(),
+            primaryYAxis: NumericAxis(),
+            series: <CartesianSeries>[
+              LineSeries<TemperatureDay, DateTime>(
+                dataSource: temperatureData,
+                xValueMapper: (TemperatureDay data, _) => data.date,
+                yValueMapper: (TemperatureDay data, _) => data.temperature,
+                color: primaryColor,
+                width: 2,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }*/
 
   @override
   Widget build(BuildContext context) {
@@ -46,42 +71,50 @@ class _MeasurementsPageState extends State<MeasurementsPage> {
       appBar: AppBar(
         title: Text('Measurements'),
       ),
-      body: temperatureData.isEmpty
-          ? Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: temperatureData.length,
-              itemBuilder: (context, index) {
-                final item = temperatureData[index];
-                return Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: ListTile(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    tileColor: backgroundOverlayColor,
-                    subtitle:
-                        Text(DateFormat("dd.MM.yyyy, hh:mm").format(item.date)),
-                    title: Text(
-                      "${item.temperature.toStringAsFixed(2)}°C",
-                      style:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        VerticalDivider(
-                          indent: 5,
-                          endIndent: 5,
+      body: Column(
+        children: [
+          //buildTemperatureChart(),
+          SizedBox(
+            height: MediaQuery.of(context).size.height / 2,
+            child: temperatureData.isEmpty
+                ? Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    itemCount: temperatureData.length,
+                    itemBuilder: (context, index) {
+                      final item = temperatureData[index];
+                      return Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: ListTile(
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          tileColor: backgroundOverlayColor,
+                          subtitle:
+                              Text(DateFormat("dd.MM.yyyy, hh:mm").format(item.date)),
+                          title: Text(
+                            "${item.temperature.toStringAsFixed(2)}°C",
+                            style:
+                                TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              VerticalDivider(
+                                indent: 5,
+                                endIndent: 5,
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete_outline),
+                                onPressed: () => deleteTemperatureData(item.date),
+                              ),
+                            ],
+                          ),
                         ),
-                        IconButton(
-                          icon: Icon(Icons.delete_outline),
-                          onPressed: () => deleteTemperatureData(item.date),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
+          ),
+        ],
+      ),
     );
   }
 }
