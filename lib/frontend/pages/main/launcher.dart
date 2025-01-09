@@ -28,8 +28,7 @@ class LauncherPageState extends State<LauncherPage> {
     await Future.delayed(Duration(seconds: 1)); //VISUAL REASON FOR DELAY
     await dataProvider.init();
     await thermoProvider.init();
-    currentOvulationCycle = await cycleProvider.getCurrentCycle();
-    currentCyclePhase = await cycleProvider.getCurrentPhase();
+    temperatureData = cyclePhasePredictor.predictFutureCyclePhases(await dataProvider.getTemperatureData(), 3);
     return;
   }
 

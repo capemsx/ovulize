@@ -9,6 +9,7 @@ import 'package:ovulize/backend/types/cyclephase.dart';
 import 'package:ovulize/backend/types/cyclephasetype.dart';
 import 'package:ovulize/frontend/widgets/cyclecell.dart';
 import 'package:ovulize/globals.dart';
+import 'package:paged_vertical_calendar/utils/date_utils.dart';
 
 class CycleWheelWidget extends StatefulWidget {
   const CycleWheelWidget({super.key});
@@ -42,7 +43,8 @@ class CycleWheelWidgetState extends State<CycleWheelWidget> {
 
   void animateToCurrentDay() async {
     await Future.delayed(Duration(milliseconds: 50)); //wait for visibility of animation to user
-    cycleWheelController.animateToPage(pastDayPreview, duration: Duration(milliseconds: 500), curve: Curves.easeOutCubic);
+    int pastDays = temperatureData.indexWhere((element) => element.date.isSameDay(DateTime.now()));
+    cycleWheelController.animateToPage(pastDays, duration: Duration(milliseconds: 500), curve: Curves.easeOutCubic);
   }
 
   @override
@@ -81,12 +83,9 @@ class CycleWheelWidgetState extends State<CycleWheelWidget> {
               controller: cycleWheelController,
               scrollDirection: Axis.horizontal,
               children: [
-                for (int i = 0; i != pastDayPreview + futureDayPreview; i++)
+                for (int i = 0; i != temperatureData.length; i++)
                   CycleCellWidget(
-                    date: DateTime.now().copyWith(day: DateTime.now().day - pastDayPreview + i),
-                    phase: CyclePhaseType.menstruation,
-                    temperature: Random().nextDouble() * 36.6,
-                    trailingSeperator: i != pastDayPreview + futureDayPreview,
+                    temperatureDay: temperatureData[i],
                   )
               ],
             ),
@@ -101,7 +100,7 @@ class CycleWheelWidgetState extends State<CycleWheelWidget> {
       child: Column(
         children: [
           Text(
-            currentCyclePhase.type.toString(),
+            temperatureData.firstWhere((element) => element.date.isSameDay(DateTime.now())).cyclePhase.toString(),
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           Text(
@@ -114,41 +113,25 @@ class CycleWheelWidgetState extends State<CycleWheelWidget> {
   }
 
   int getLeftDaysOfCurrentPhase() {
+
     DateTime now = DateTime.now();
-    int daysSinceStart = now.difference(currentOvulationCycle.startDate).inDays;
-    int daysSincePhaseStart = 0;
-
-    for (CyclePhase phase in currentOvulationCycle.phases) {
-      if (phase.type == currentCyclePhase.type) {
-        int daysIntoCurrentPhase = daysSinceStart - daysSincePhaseStart;
-        return phase.durationDays - daysIntoCurrentPhase;
-      }
-      daysSincePhaseStart += phase.durationDays;
-    }
-
-    return 0; // Return 0 if we're at the end of the cycle
+    CyclePhaseType currentPhase = temperatureData.firstWhere((element) => element.date.isSameDay(now)).cyclePhase;
+    int currentPhaseDayCount = getDayCountForPhase(currentPhase);
+    int currentCycleDay = getCurrentCycleDay();
+    return currentPhaseDayCount - (currentCycleDay % currentPhaseDayCount);
   }
 
   int getTotalCycleDays() {
-    int totalDays = 0;
-    for (CyclePhase phase in currentOvulationCycle.phases) {
-      totalDays += phase.durationDays;
-    }
-    return totalDays;
+    return temperatureData.length;
   }
 
   int getCurrentCycleDay() {
     DateTime now = DateTime.now();
-    int daysSinceStart = now.difference(currentOvulationCycle.startDate).inDays;
-    return daysSinceStart + 1;
+    return temperatureData.indexWhere((element) => element.date.isSameDay(now)) + 1;
   }
 
   int getDayCountForPhase(CyclePhaseType phaseType) {
-    for (CyclePhase phase in currentOvulationCycle.phases) {
-      if (phase.type == phaseType) {
-        return phase.durationDays;
-      }
-    }
-    return 0;
+    return temperatureData.where((element) => element.cyclePhase == phaseType).length;
   }
+
 }

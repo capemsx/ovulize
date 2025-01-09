@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:line_icons/line_icons.dart';
+import 'package:ovulize/frontend/pages/sub/measurements.dart';
 import 'package:ovulize/globals.dart';
 import 'package:package_info/package_info.dart';
 
@@ -109,7 +110,7 @@ class SettingsPageState extends State<SettingsPage> {
               settingTile(
                   "Vergangene Messungen",
                   () {
-                    
+                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => MeasurementsPage()));
                   }),
 
               settingTile(

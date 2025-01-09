@@ -4,8 +4,10 @@ import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:ovulize/backend/types/cycle.dart';
 import 'package:ovulize/backend/types/cyclephase.dart';
 import 'package:ovulize/backend/types/cyclephasetype.dart';
+import 'package:ovulize/frontend/widgets/appbar.dart';
 import 'package:ovulize/globals.dart';
 import 'package:paged_vertical_calendar/paged_vertical_calendar.dart';
+import 'package:paged_vertical_calendar/utils/date_utils.dart';
 
 class CycleCalendarWidget extends StatefulWidget {
   const CycleCalendarWidget({super.key});
@@ -29,16 +31,11 @@ class CycleCalendarWidgetState extends State<CycleCalendarWidget> {
           padding: const EdgeInsets.all(8.0),
           child: PagedVerticalCalendar(
             scrollController: ModalScrollController.of(context),
-            minDate: DateTime.now(),
+            minDate: temperatureData.first.date,
             initialDate: DateTime.now(),
-            maxDate: DateTime.now().add(Duration(days: 178)),
+            maxDate: temperatureData.last.date,
             dayBuilder: (context, date) {
-              return FutureBuilder(
-                future: cycleProvider.getCyclePhaseTypeForDate(date),
-                builder: (context, snapshot) {
-                  return Text(date.day.toString(), textAlign: TextAlign.center, style: TextStyle(color: snapshot.hasData ? snapshot.data!.getColor() : Colors.grey),);
-                }
-              );
+              return Text(date.day.toString(), textAlign: TextAlign.center, style: TextStyle(color: temperatureData.where((element) => element.date.isSameDay(date)).firstOrNull?.cyclePhase.getColor() ?? Colors.grey),);
             },
           ),
         ),

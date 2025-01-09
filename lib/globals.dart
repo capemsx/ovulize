@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'package:ovulize/backend/providers/cycleprovider.dart';
+import 'package:ovulize/backend/providers/cyclephasepredictor.dart';
 import 'package:ovulize/backend/providers/dataprovider.dart';
 import 'package:ovulize/backend/providers/thermoprovider.dart';
 import 'package:ovulize/backend/types/cycle.dart';
@@ -22,11 +22,8 @@ Color lutealColor = Color.fromARGB(255, 82, 223, 255).withOpacity(.35);
 double appBarHeight = 60;
 
 //PROVIDERS
-CycleProvider cycleProvider = CycleProvider();
+CyclePhasePredictor cyclePhasePredictor = CyclePhasePredictor();
 DataProvider dataProvider = DataProvider();
 ThermoProvider thermoProvider = ThermoProvider();
 
-
-//RUNTIME VALUES
-late OvulationCycle currentOvulationCycle;
-late CyclePhase currentCyclePhase;
+List<TemperatureDay> temperatureData = [];

@@ -186,6 +186,7 @@ class MeasurePageState extends State<MeasurePage> {
                                 height: 60,
                                 onPressed: () async {
                                   await dataProvider.insertTemperatureData(DateTime.now(), finalValue);
+                                  await thermoProvider.disconnectDevice();
                                   setState(() {
                                     done = true;
                                   });

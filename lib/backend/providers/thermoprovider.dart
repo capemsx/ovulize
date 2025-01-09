@@ -34,6 +34,17 @@ class ThermoProvider {
     }
   }
 
+  Future<bool> disconnectDevice() async {
+    try {
+      await ovulizeSensor.value!.disconnect();
+      ovulizeSensor.value = null;
+      return true;
+    } catch (e) {
+      print("Error disconnecting from device: $e");
+      return false;
+    }
+  }
+
   bool deviceConnected() {
     if (ovulizeSensor.value == null || !ovulizeSensor.value!.isConnected) {
       return false;
@@ -79,6 +90,7 @@ class ThermoProvider {
     var subscription = FlutterBluePlus.onScanResults.listen(
       (results) {
         foundOvulizeSensors.value.clear();
+        foundOvulizeSensors.notifyListeners();
         if (results.isNotEmpty) {
           for (BluetoothDevice device in results.map((r) => r.device)) {
             if (device.advName.toString().contains("ovulize-")) {
