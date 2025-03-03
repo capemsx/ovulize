@@ -1,7 +1,8 @@
 import 'dart:async';
-
-import 'package:animated_flip_counter/animated_flip_counter.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -48,70 +49,161 @@ class MeasurePageState extends State<MeasurePage> {
         width: MediaQuery.of(context).size.width,
         child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Center(
-                child: CarouselSlider(
-                    carouselController: carouselSliderController,
-                    items: [
-                      Container(),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Start your measurement",
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: TweenAnimationBuilder<double>(
+                duration: Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                tween: Tween<double>(
+                  begin: 0,
+                  end: measurementProgress,
+                ),
+                builder: (context, value, _) => LinearProgressIndicator(
+                  value: value,
+                  backgroundColor: Colors.transparent,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    primaryColor.withOpacity(0.3),
+                  ),
+                  minHeight: 3,
+                ),
+              ),
+            ),
+            Center(
+              child: CarouselSlider(
+                  carouselController: carouselSliderController,
+                  items: [
+                    Container(),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Start your measurement",
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(
+                          height: 5,
+                        ),
+                        Text(
+                          "Place the sensor on your finger and press the button below to start the measurement.",
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
+                          textAlign: TextAlign.center,
+                        ),
+                        SizedBox(
+                          height: 20,
+                        ),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: MaterialButton(
+                              color: primaryColor,
+                              textColor: backgroundColor,
+                              minWidth: 180,
+                              height: 60,
+                              onPressed: () async {
+                                setPage(2);
+                                await Future.delayed(Duration(
+                                    milliseconds:
+                                        500)); //wait for animation to be finished
+                                startMeasurement();
+                              },
+                              child: Text("Start")),
+                        ),
+                      ],
+                    ),
+                    Stack(
+                      children: [
+                        Container(
+                            decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                              radius: 0.5 * measurementProgress,
+                              colors: <Color>[
+                                primaryColor
+                                    .withOpacity(0.4 * measurementProgress),
+                                primaryColor.withOpacity(0)
+                              ]),
+                        )),
+                        Center(
+                          child: StreamBuilder(
+                            stream: thermoProvider.getTemperatureStream(),
+                            builder: (context, snapshot) {
+                              final value =
+                                  snapshot.data?.toStringAsFixed(2) ?? "--.--";
+                              return Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TweenAnimationBuilder(
+                                    duration: Duration(milliseconds: 100),
+                                    curve: Curves.easeOutBack,
+                                    tween: Tween<double>(begin: 0.95, end: 1.0),
+                                    key: ValueKey(
+                                        value), 
+                                    builder: (context, scale, child) =>
+                                        Transform.scale(
+                                      scale: scale,
+                                      child: Text(
+                                        value,
+                                        style: TextStyle(
+                                          color: primaryColor,
+                                          shadows: [
+                                            Shadow(
+                                                color: primaryColor
+                                                    .withOpacity(0.3),
+                                                offset: Offset(0, 0),
+                                                blurRadius: 6)
+                                          ],
+                                          fontFamily: "Gilroy-Bold",
+                                          fontSize:
+                                              55,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    "°",
+                                    style: TextStyle(
+                                      color: primaryColor,
+                                      shadows: [
+                                        Shadow(
+                                            color:
+                                                primaryColor.withOpacity(0.3),
+                                            offset: Offset(0, 0),
+                                            blurRadius: 6)
+                                      ],
+                                      fontFamily: "Gilroy-Bold",
+                                      fontSize: 55,
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
-                          SizedBox(
-                            height: 5,
-                          ),
-                          Text(
-                            "Place the sensor on your finger and press the button below to start the measurement.",
-                            style:
-                                TextStyle(fontSize: 14, color: Colors.black54),
-                            textAlign: TextAlign.center,
-                          ),
-                          SizedBox(
-                            height: 20,
-                          ),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: MaterialButton(
-                                color: primaryColor,
-                                textColor: backgroundColor,
-                                minWidth: 180,
-                                height: 60,
-                                onPressed: () async {
-                                  setPage(2);
-                                  await Future.delayed(Duration(
-                                      milliseconds:
-                                          500)); //wait for animation to be finished
-                                  startMeasurement();
-                                },
-                                child: Text("Start")),
-                          ),
-                        ],
-                      ),
-                      Stack(
-                        children: [
-                          Container(
-                              decoration: BoxDecoration(
-                            gradient: RadialGradient(
-                                radius: 0.5 * measurementProgress,
-                                colors: <Color>[
-                                  primaryColor
-                                      .withOpacity(0.4 * measurementProgress),
-                                  primaryColor.withOpacity(0)
-                                ]),
-                          )),
-                          Center(
-                            child: StreamBuilder(
-                              stream: thermoProvider.getTemperatureStream(),
-                              builder: (context, snapshot) {
-                                return Text(
-                                  (snapshot.data?.toStringAsFixed(2) ??
-                                          "--.--") +
+                        )
+                      ],
+                    ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Stack(
+                          alignment: Alignment.bottomCenter,
+                          children: [
+                            Align(
+                                alignment: Alignment.topCenter,
+                                child: buildBackgroundChart()),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Positioned(
+                                    right: 20,
+                                    child: Icon(
+                                      LineIcons.thermometer34Full,
+                                      color: primaryColor,
+                                      size: 40,
+                                    )),
+                                Text(
+                                  (finalValue.toStringAsFixed(2) ?? "--.--") +
                                       "°",
                                   style: TextStyle(
                                       color: primaryColor,
@@ -124,88 +216,59 @@ class MeasurePageState extends State<MeasurePage> {
                                       ],
                                       fontFamily: "Gilroy-Bold",
                                       fontSize: 50 + (5 * measurementProgress)),
-                                );
-                              },
+                                ),
+                              ],
                             ),
-                          )
-                        ],
-                      ),
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Positioned(
-                                right: 20,
-                                child: Icon(LineIcons.thermometer34Full, color: primaryColor, size: 40,)),
-                              Text(
-                                (finalValue.toStringAsFixed(2) ?? "--.--") + "°",
-                                style: TextStyle(
-                                    color: primaryColor,
-                                    shadows: [
-                                      Shadow(
-                                          color: primaryColor.withOpacity(0.3),
-                                          offset: Offset(0, 0),
-                                          blurRadius: 6)
-                                    ],
-                                    fontFamily: "Gilroy-Bold",
-                                    fontSize: 50 + (5 * measurementProgress)),
-                              ),
-                            ],
+                          ],
+                        ),
+                        SizedBox(
+                            height: MediaQuery.of(context).size.height / 4),
+                        TextButton(
+                          child: Text(
+                            "Erneut messen",
+                            style: TextStyle(color: primaryColor),
                           ),
-                          SizedBox(
-                              height: MediaQuery.of(context).size.height / 4),
-                          TextButton(
-                            child: Text(
-                              "Erneut messen",
-                              style: TextStyle(color: primaryColor),
-                            ),
-                            onPressed: () {
-                              
-
-                              setPage(1);
+                          onPressed: () {
+                            setPage(1);
+                            setState(() {
+                              measuredValues = [];
+                              measurementProgress = 0;
+                              finalValue = 0;
+                            });
+                          },
+                        ),
+                        SizedBox(
+                          height: 10,
+                        ),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: MaterialButton(
+                              color: primaryColor,
+                              textColor: backgroundColor,
+                              minWidth: 180,
+                              height: 60,
+                              onPressed: () async {
+                                await dataProvider.insertTemperatureData(
+                                    DateTime.now(), finalValue);
+                                await thermoProvider.disconnectDevice();
                                 setState(() {
-                                measuredValues = [];
-                                measurementProgress = 0;
-                                finalValue = 0;
-                              });
-
-                              
-                            },
-                          ),
-                          SizedBox(
-                            height: 10,
-                          ),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: MaterialButton(
-                                color: primaryColor,
-                                textColor: backgroundColor,
-                                minWidth: 180,
-                                height: 60,
-                                onPressed: () async {
-                                  await dataProvider.insertTemperatureData(DateTime.now(), finalValue);
-                                  await thermoProvider.disconnectDevice();
-                                  setState(() {
-                                    done = true;
-                                  });
-                                  await Future.delayed(Duration(
-                                      milliseconds:
-                                          500));
-                                  Navigator.of(context).pop();
-                                },
-                                child: done ? Icon(Icons.check) : Text("Speichern")),
-                          ),
-                        ],
-                      )
-                    ],
-                    options: CarouselOptions(
-                        enableInfiniteScroll: false,
-                        aspectRatio: 5 / 10,
-                        viewportFraction: 1,
-                        enlargeFactor: 0.2)),
-              ),
+                                  done = true;
+                                });
+                                await Future.delayed(
+                                    Duration(milliseconds: 500));
+                                Navigator.of(context).pop();
+                              },
+                              child:
+                                  done ? Icon(Icons.check) : Text("Speichern")),
+                        ),
+                      ],
+                    )
+                  ],
+                  options: CarouselOptions(
+                      enableInfiniteScroll: false,
+                      aspectRatio: 5 / 10,
+                      viewportFraction: 1,
+                      enlargeFactor: 0.2)),
             ),
             Align(
                 alignment: Alignment.bottomCenter,
@@ -249,28 +312,22 @@ class MeasurePageState extends State<MeasurePage> {
   }
 
   double getBalancedTemperature(List<double> temperatures) {
-    // 1. excluding extreme values
-    final filteredTemps =
-        temperatures.where((temp) => temp >= 35.0 && temp <= 42.0).toList();
-    if (filteredTemps.isEmpty) {
-      throw Exception("Invalid measurement.");
-    }
-
-    // 2. Sorting for calculating median
-    filteredTemps.sort();
+    // 1. Sorting for calculating median
+    List<double> lTemperatures = temperatures.toList();
+    lTemperatures.sort();
 
     // Calculating median
     double median;
-    int middle = filteredTemps.length ~/ 2;
-    if (filteredTemps.length % 2 == 1) {
-      median = filteredTemps[middle];
+    int middle = lTemperatures.length ~/ 2;
+    if (lTemperatures.length % 2 == 1) {
+      median = lTemperatures[middle];
     } else {
-      median = (filteredTemps[middle - 1] + filteredTemps[middle]) / 2.0;
+      median = (lTemperatures[middle - 1] + lTemperatures[middle]) / 2.0;
     }
 
     // 3. Removing values 0.2°C away from median
     final refinedTemps =
-        filteredTemps.where((temp) => (temp - median).abs() <= 0.2).toList();
+        lTemperatures.where((temp) => (temp - median).abs() <= 0.2).toList();
 
     // 4. Calculating final average
     double average = refinedTemps.reduce((a, b) => a + b) / refinedTemps.length;
@@ -319,5 +376,60 @@ class MeasurePageState extends State<MeasurePage> {
         duration: Duration(milliseconds: 450), curve: Curves.easeInOut);
     await Future.delayed(
         Duration(milliseconds: 450)); // wait for animation to finish
+  }
+
+  //WIDGETS//
+
+  Widget buildBackgroundChart() {
+    return ShaderMask(
+      shaderCallback: (Rect bounds) {
+        return LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            Colors.transparent,
+            Colors.white,
+            Colors.white,
+            Colors.transparent,
+          ],
+          stops: [0.0, 0.15, 0.85, 1.0],
+        ).createShader(bounds);
+      },
+      blendMode: BlendMode.dstIn,
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width,
+        height: 200,
+        child: IgnorePointer(
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(show: false),
+              titlesData: FlTitlesData(show: false),
+              borderData: FlBorderData(show: false),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: List.generate(
+                    measuredValues.length,
+                    (index) => FlSpot(index.toDouble(), measuredValues[index]),
+                  ),
+                  isCurved: true,
+                  color: primaryColor.withOpacity(0.2),
+                  barWidth: 2,
+                  dotData: FlDotData(show: false),
+                ),
+                LineChartBarData(
+                  spots: [
+                    FlSpot(0, finalValue),
+                    FlSpot(measuredValues.length.toDouble(), finalValue),
+                  ],
+                  color: primaryColor.withOpacity(0.4),
+                  barWidth: 2,
+                  dotData: FlDotData(show: false),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -89,7 +89,7 @@ class _MeasurementsPageState extends State<MeasurementsPage> {
                               borderRadius: BorderRadius.circular(12)),
                           tileColor: backgroundOverlayColor,
                           subtitle:
-                              Text(DateFormat("dd.MM.yyyy, hh:mm").format(item.date)),
+                              Text(DateFormat("dd.MM.yyyy, HH:mm").format(item.date)),
                           title: Text(
                             "${item.temperature.toStringAsFixed(2)}°C",
                             style:

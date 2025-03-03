@@ -24,27 +24,36 @@ class TemperatureDay {
 }
 
 class CyclePhasePredictor {
-  late final LogisticRegressor model;
+  late LogisticRegressor model;
+  late DataFrame trainingData;
 
   CyclePhasePredictor() {
     // Train a model with more features and dummy data as an example
-    final data = DataFrame([
+    trainingData = DataFrame([
       ['temperature', 'avgLast5Days', 'trendLast5Days', 'phase'],
-      [36.5, 36.6, 0.0, 0], // menstruation
-      [36.6, 36.6, 0.0, 0],
-      [36.6, 36.5, 0.1, 1], // follicular
-      [36.4, 36.5, -0.1, 2], // ovulation
-      [36.8, 36.7, 0.2, 3], // luteal
-      [37.1, 36.9, 0.3, 4], // pregnancy
-      [36.5, 36.5, 0.0, 0], // menstruation
-      [36.6, 36.5, 0.1, 1], // follicular
+      // Menstruation (Phase 0)
+      [36.4, 36.4, 0.0, 0],
+      [36.5, 36.45, 0.1, 0],
+      // Follikulär (Phase 1)
+      [36.6, 36.5, 0.1, 1],
       [36.7, 36.6, 0.1, 1],
-      [36.8, 36.7, 0.1, 1],
-      [36.9, 36.8, 0.1, 1],
+      // Ovulation (Phase 2)
+      [36.8, 36.7, 0.2, 2],
+      [37.0, 36.8, 0.3, 2],
+      // Luteal (Phase 3)
+      [37.1, 37.0, 0.1, 3],
+      [37.0, 37.0, 0.0, 3],
+      // Zweiter Zyklus zur Verbesserung
+      [36.4, 36.6, -0.4, 0],
+      [36.5, 36.5, 0.1, 0],
+      [36.7, 36.6, 0.2, 1],
+      [36.9, 36.8, 0.2, 2],
+      [37.1, 37.0, 0.2, 3]
     ], headerExists: true);
 
-    model = LogisticRegressor(data, "phase", optimizerType: LinearOptimizerType.gradient);
+    model = LogisticRegressor(trainingData, "phase", optimizerType: LinearOptimizerType.gradient);
   }
+
   List<TemperatureDay> predictFutureCyclePhases(List<TemperatureDay> historicalData, int monthsInFuture) {
     final int daysInFuture = monthsInFuture * 30; // Approximate days in future
     final List<TemperatureDay> allData = List.from(historicalData);
@@ -105,10 +114,22 @@ class CyclePhasePredictor {
       );
 
       allData.add(nextTemperatureDay);
+
+      // Add the new day to the training data
+      final newTrainingData = DataFrame([
+        ['temperature', 'avgLast5Days', 'trendLast5Days', 'phase'],
+        [
+          nextTemperatureDay.temperature,
+          nextTemperatureDay.avgLast5Days ?? 0.0,
+          nextTemperatureDay.trendLast5Days ?? 0.0,
+          CyclePhaseType.values.indexOf(nextTemperatureDay.cyclePhase)
+        ],
+      ], headerExists: true);
+
+      trainingData = DataFrame([...trainingData.rows, ...newTrainingData.rows], headerExists: true);
+      model = LogisticRegressor(trainingData, "phase", optimizerType: LinearOptimizerType.gradient);
     }
 
     return allData;
   }
-
-  
 }

@@ -36,7 +36,7 @@ class SettingsPageState extends State<SettingsPage> {
           },
         ),*/
         title: Text(
-          "Informationen"
+          "Informations"
           
         ),
         foregroundColor: Colors.black,
@@ -75,7 +75,7 @@ class SettingsPageState extends State<SettingsPage> {
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500,
                                     color: Colors.grey),),
-                                    Text("5. PK von Henri Stimm",
+                                    Text("5. PK by Henri Stimm",
                                 style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w500,
@@ -108,13 +108,13 @@ class SettingsPageState extends State<SettingsPage> {
                 height: 10,
               ),
               settingTile(
-                  "Vergangene Messungen",
+                  "Recent measurements",
                   () {
                     Navigator.of(context).push(MaterialPageRoute(builder: (context) => MeasurementsPage()));
                   }),
 
               settingTile(
-                  "Impressum",
+                  "Imprint",
                   () {
 
                   }),
