@@ -24,112 +24,152 @@ class TemperatureDay {
 }
 
 class CyclePhasePredictor {
-  late LogisticRegressor model;
-  late DataFrame trainingData;
+  LogisticRegressor? model;
+  DataFrame? trainingData;
+  bool isModelTrained = false;
 
-  CyclePhasePredictor() {
-    // Train a model with more features and dummy data as an example
-    trainingData = DataFrame([
-      ['temperature', 'avgLast5Days', 'trendLast5Days', 'phase'],
-      // Menstruation (Phase 0)
-      [36.4, 36.4, 0.0, 0],
-      [36.5, 36.45, 0.1, 0],
-      // Follikulär (Phase 1)
-      [36.6, 36.5, 0.1, 1],
-      [36.7, 36.6, 0.1, 1],
-      // Ovulation (Phase 2)
-      [36.8, 36.7, 0.2, 2],
-      [37.0, 36.8, 0.3, 2],
-      // Luteal (Phase 3)
-      [37.1, 37.0, 0.1, 3],
-      [37.0, 37.0, 0.0, 3],
-      // Zweiter Zyklus zur Verbesserung
-      [36.4, 36.6, -0.4, 0],
-      [36.5, 36.5, 0.1, 0],
-      [36.7, 36.6, 0.2, 1],
-      [36.9, 36.8, 0.2, 2],
-      [37.1, 37.0, 0.2, 3]
-    ], headerExists: true);
+  CyclePhasePredictor();
 
-    model = LogisticRegressor(trainingData, "phase", optimizerType: LinearOptimizerType.gradient);
+  bool hasCompleteCycle(List<TemperatureDay> historicalData) {
+    // Prüfen, ob mindestens ein vollständiger Zyklus vorliegt
+    // Ein Zyklus ist komplett, wenn Daten von allen Phasen vorliegen
+    if (historicalData.length < 21) {
+      // Mindestlänge eines Zyklus (ca. 21 Tage)
+      return false;
+    }
+
+    // Prüfe, ob alle Phasenwerte vorhanden sind
+    Set<CyclePhaseType> phases = {};
+    for (var day in historicalData) {
+      if (day.cyclePhase != CyclePhaseType.uncertain) {
+        phases.add(day.cyclePhase);
+      }
+    }
+
+    // Alle vier Phasentypen sollten vorhanden sein
+    return phases.length >= 4;
   }
 
-  List<TemperatureDay> predictFutureCyclePhases(List<TemperatureDay> historicalData, int monthsInFuture) {
-    final int daysInFuture = monthsInFuture * 30; // Approximate days in future
+  void trainModel(List<TemperatureDay> historicalData) {
+    if (!hasCompleteCycle(historicalData)) {
+      return; // Nicht genügend Daten für Training
+    }
+
+    List<List<dynamic>> trainingRows = [
+      ['temperature', 'avgLast5Days', 'trendLast5Days', 'phase']
+    ];
+
+    for (var day in historicalData) {
+      if (day.cyclePhase != CyclePhaseType.uncertain) {
+        trainingRows.add([
+          day.temperature,
+          day.avgLast5Days ?? day.temperature,
+          day.trendLast5Days ?? 0.0,
+          CyclePhaseType.values.indexOf(day.cyclePhase)
+        ]);
+      }
+    }
+
+    trainingData = DataFrame(trainingRows, headerExists: true);
+    model = LogisticRegressor(trainingData!, "phase",
+        optimizerType: LinearOptimizerType.gradient);
+    isModelTrained = true;
+  }
+
+  List<TemperatureDay> predictFutureCyclePhases(
+      List<TemperatureDay> historicalData, int monthsInFuture) {
     final List<TemperatureDay> allData = List.from(historicalData);
 
-    // Predict cycle phases for historical data
+    // Überprüfe, ob genug Daten zum Training vorhanden sind
+    if (!isModelTrained) {
+      trainModel(historicalData);
+
+      // Wenn immer noch nicht genug Daten, keine Vorhersagen machen
+      if (!isModelTrained) {
+        return allData; // Gib die ursprünglichen Daten zurück ohne Vorhersagen
+      }
+    }
+
+    // Berechne Features für historische Daten
     for (var day in allData) {
-      final recentData = allData.sublist(max(0, allData.indexOf(day) - 5), allData.indexOf(day) + 1);
+      final recentData = allData.sublist(
+          max(0, allData.indexOf(day) - 5), allData.indexOf(day) + 1);
       final avgLast5Days = recentData.isNotEmpty
-          ? recentData.map((d) => d.temperature).reduce((a, b) => a + b) / recentData.length
+          ? recentData.map((d) => d.temperature).reduce((a, b) => a + b) /
+              recentData.length
           : day.temperature;
       final trendLast5Days = recentData.length > 1
           ? recentData.last.temperature - recentData.first.temperature
           : 0.0;
 
-      final prediction = model.predict(DataFrame([
-        ['temperature', 'avgLast5Days', 'trendLast5Days'],
-        [
-          day.temperature,
-          avgLast5Days,
-          trendLast5Days
-        ],
-      ]));
+      if (model != null) {
+        final prediction = model!.predict(DataFrame([
+          ['temperature', 'avgLast5Days', 'trendLast5Days'],
+          [day.temperature, avgLast5Days, trendLast5Days],
+        ]));
 
-      final predictedPhase = prediction.rows.first.first.toInt();
-      day.cyclePhase = CyclePhaseType.values[predictedPhase];
+        final predictedPhase = prediction.rows.first.first.toInt();
+        day.cyclePhase = CyclePhaseType.values[predictedPhase];
+      }
     }
 
-    // Predict cycle phases for future data
+    // Wenn kein Modell trainiert wurde, keine Zukunftsprognosen
+    if (model == null) {
+      return allData;
+    }
+
+    // Vorhersage für zukünftige Tage
+    final int daysInFuture = monthsInFuture * 30;
     for (int i = 0; i < daysInFuture; i++) {
       final lastDay = allData.last;
-      final nextDate = lastDay.date.add(Duration(days: 1));
+      final nextDate = lastDay.date.add(const Duration(days: 1));
 
-      // Calculate additional features (average and trend)
-      final recentData = allData.sublist(max(0, allData.length - 5), allData.length);
+      final recentData =
+          allData.sublist(max(0, allData.length - 5), allData.length);
       final avgLast5Days = recentData.isNotEmpty
-          ? recentData.map((d) => d.temperature).reduce((a, b) => a + b) / recentData.length
+          ? recentData.map((d) => d.temperature).reduce((a, b) => a + b) /
+              recentData.length
           : lastDay.temperature;
       final trendLast5Days = recentData.length > 1
           ? recentData.last.temperature - recentData.first.temperature
           : 0.0;
 
-      final prediction = model.predict(DataFrame([
+      final prediction = model!.predict(DataFrame([
         ['temperature', 'avgLast5Days', 'trendLast5Days'],
-        [
-          lastDay.temperature,
-          avgLast5Days,
-          trendLast5Days
-        ],
+        [lastDay.temperature, avgLast5Days, trendLast5Days],
       ]));
 
       final predictedPhase = prediction.rows.first.first.toInt();
       final nextTemperatureDay = TemperatureDay(
         date: nextDate,
-        temperature: lastDay.temperature, // Assuming temperature remains constant for simplicity
+        temperature: lastDay.temperature,
         avgLast5Days: avgLast5Days,
         trendLast5Days: trendLast5Days,
         cyclePhase: CyclePhaseType.values[predictedPhase],
       );
 
       allData.add(nextTemperatureDay);
-
-      // Add the new day to the training data
-      final newTrainingData = DataFrame([
-        ['temperature', 'avgLast5Days', 'trendLast5Days', 'phase'],
-        [
-          nextTemperatureDay.temperature,
-          nextTemperatureDay.avgLast5Days ?? 0.0,
-          nextTemperatureDay.trendLast5Days ?? 0.0,
-          CyclePhaseType.values.indexOf(nextTemperatureDay.cyclePhase)
-        ],
-      ], headerExists: true);
-
-      trainingData = DataFrame([...trainingData.rows, ...newTrainingData.rows], headerExists: true);
-      model = LogisticRegressor(trainingData, "phase", optimizerType: LinearOptimizerType.gradient);
     }
 
     return allData;
+  }
+
+  void updateModel(TemperatureDay day) {
+    if (trainingData == null || model == null) return;
+
+    final newTrainingData = DataFrame([
+      ['temperature', 'avgLast5Days', 'trendLast5Days', 'phase'],
+      [
+        day.temperature,
+        day.avgLast5Days ?? 0.0,
+        day.trendLast5Days ?? 0.0,
+        CyclePhaseType.values.indexOf(day.cyclePhase)
+      ],
+    ], headerExists: true);
+
+    trainingData = DataFrame([...trainingData!.rows, ...newTrainingData.rows],
+        headerExists: true);
+    model = LogisticRegressor(trainingData!, "phase",
+        optimizerType: LinearOptimizerType.gradient);
   }
 }
