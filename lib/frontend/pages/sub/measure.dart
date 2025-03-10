@@ -10,6 +10,7 @@ import 'package:line_icons/line_icon.dart';
 import 'package:line_icons/line_icons.dart';
 import 'package:lottie/lottie.dart';
 import 'package:ovulize/globals.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MeasurePage extends StatefulWidget {
   const MeasurePage({super.key});
@@ -27,12 +28,32 @@ class MeasurePageState extends State<MeasurePage> {
   List<double> measuredValues = [];
   double finalValue = 0;
   bool done = false;
+  bool showTutorial = false;
 
   @override
   void initState() {
     super.initState();
+    checkFirstOpen();
     createConnection();
     checkForConnectionStateAsync();
+  }
+
+  Future<void> checkFirstOpen() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool firstOpen = !(prefs.getBool('measurement_tutorial_shown') ?? false);
+    
+    if (firstOpen) {
+      setState(() {
+        showTutorial = true;
+      });
+      await prefs.setBool('measurement_tutorial_shown', true);
+    }
+  }
+  
+  void closeTutorial() {
+    setState(() {
+      showTutorial = false;
+    });
   }
 
   void createConnection() async {
@@ -304,12 +325,89 @@ class MeasurePageState extends State<MeasurePage> {
                         LineIcons.times,
                         color: Colors.grey,
                       )),
-                ))
+                )),
+                if (showTutorial)
+  Container(
+    color: Colors.black.withOpacity(0.7),
+    width: double.infinity,
+    height: double.infinity,
+    child: Center(
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.85,
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Anleitung zur Temperaturmessung",
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 20),
+            buildTutorialStep(
+              icon: LineIcons.thermometer, 
+              text: "Lege das Thermometer unter deine Zunge und schließe den Mund"
+            ),
+            SizedBox(height: 10),
+            buildTutorialStep(
+              icon: LineIcons.chair, 
+              text: "Setze dich bequem und ruhig hin während der Messung"
+            ),
+            SizedBox(height: 10),
+            buildTutorialStep(
+              icon: LineIcons.exclamationTriangle, 
+              text: "Achte darauf, dass dein Körper keine erhöhte oder erniedrigte Temperatur hat"
+            ),
+            SizedBox(height: 10),
+            buildTutorialStep(
+              icon: LineIcons.clock, 
+              text: "Für beste Ergebnisse, miss täglich zur gleichen Uhrzeit"
+            ),
+            SizedBox(height: 20),
+            MaterialButton(
+              color: primaryColor,
+              textColor: Colors.white,
+              minWidth: 150,
+              height: 50,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text("Verstanden"),
+              onPressed: closeTutorial,
+            )
+          ],
+        ),
+      ),
+    ),
+  ),
           ],
         ),
       ),
     );
   }
+
+  Widget buildTutorialStep({required IconData icon, required String text}) {
+  return Row(
+    children: [
+      Icon(icon, color: primaryColor, size: 24),
+      SizedBox(width: 10),
+      Expanded(
+        child: Text(
+          text,
+          style: TextStyle(fontSize: 16),
+        ),
+      ),
+    ],
+  );
+}
 
   double getBalancedTemperature(List<double> temperatures) {
     // 1. Sorting for calculating median

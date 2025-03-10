@@ -50,6 +50,7 @@ dependencies:
   ml_dataframe: ^1.6.0
   fl_chart: ^0.70.2
   animated_text_kit: ^4.2.3
+  shared_preferences: ^2.5.2
 
 dev_dependencies:
   flutter_test:

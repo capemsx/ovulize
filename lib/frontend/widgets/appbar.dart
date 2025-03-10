@@ -29,7 +29,7 @@ class AppBarWidgetState extends State<AppBarWidget> {
       width: MediaQuery.of(context).size.width,
       height: appBarHeight,
       decoration: BoxDecoration(color: barColor, boxShadow: [
-        widget.showPhaseBar ? BoxShadow(spreadRadius: 2, blurRadius: 2, color: temperatureData.firstWhere((element) => element.date.isSameDay(DateTime.now())).cyclePhase.getColor()) : BoxShadow(spreadRadius: 0.5, blurRadius: 1, color: Colors.grey)
+        widget.showPhaseBar ? BoxShadow(spreadRadius: 2, blurRadius: 2, color: temperatureData.isEmpty ? CyclePhaseType.test.getColor() : temperatureData.firstWhere((element) => element.date.isSameDay(DateTime.now())).cyclePhase.getColor()) : BoxShadow(spreadRadius: 0.5, blurRadius: 1, color: Colors.grey)
       ]),
       child: Stack(
         alignment: Alignment.center,
