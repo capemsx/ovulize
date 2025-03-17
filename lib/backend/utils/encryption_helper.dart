@@ -5,7 +5,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class EncryptionHelper {
   static const keyName = 'encryption_key';
   static late encrypt.Key key;
-  static late encrypt.IV iv;
   static late encrypt.Encrypter encrypter;
   static final FlutterSecureStorage secureStorage = FlutterSecureStorage();
   
@@ -18,20 +17,37 @@ class EncryptionHelper {
     }
     
     key = encrypt.Key(base64Decode(keyString));
-    iv = encrypt.IV.fromLength(16);
     encrypter = encrypt.Encrypter(encrypt.AES(key));
   }
 
   static String encryptData(String data) {
+    // Generiere für jede Verschlüsselung einen neuen IV
+    final iv = encrypt.IV.fromSecureRandom(16);
     final encrypted = encrypter.encrypt(data, iv: iv);
-    return encrypted.base64;
+    
+    // Speichere IV zusammen mit verschlüsselten Daten 
+    // Format: base64(iv) + ':' + base64(encryptedData)
+    return base64Encode(iv.bytes) + ':' + encrypted.base64;
   }
 
   static String decryptData(String encryptedData) {
-    final encrypted = encrypt.Encrypted(base64Decode(encryptedData));
-    return encrypter.decrypt(encrypted, iv: iv);
+    try {
+      // Extrahiere IV und verschlüsselte Daten
+      final parts = encryptedData.split(':');
+      if (parts.length != 2) {
+        throw FormatException('Ungültiges Datenformat');
+      }
+      
+      final iv = encrypt.IV(base64Decode(parts[0]));
+      final encrypted = encrypt.Encrypted(base64Decode(parts[1]));
+      
+      return encrypter.decrypt(encrypted, iv: iv);
+    } catch (e) {
+      throw Exception('Entschlüsselungsfehler: $e');
+    }
   }
   
+  // Die restlichen Methoden bleiben unverändert
   static double? decryptDouble(String? encryptedData) {
     if (encryptedData == null) return null;
     final decrypted = decryptData(encryptedData);
