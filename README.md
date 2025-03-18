@@ -7,7 +7,6 @@ An open-source fertility tracking app with high-precision temperature measuremen
 - 🌡️ **High-precision temperature tracking** with custom ESP32 + TMP117 sensor (±0.1°C accuracy)
 - 📊 **Advanced cycle analysis** with automatic phase detection
 - 📱 **Intuitive UI** with interactive cycle wheel and calendar visualization
-- 🔔 **Measurement reminders** for consistent daily readings
 - 📈 **Personalized predictions** based on your historical data
 - 🔒 **Privacy-focused** with all data stored locally on your device
 
