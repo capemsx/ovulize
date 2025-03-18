@@ -354,7 +354,7 @@ class MeasurePageState extends State<MeasurePage> {
             SizedBox(height: 20),
             buildTutorialStep(
               icon: LineIcons.thermometer, 
-              text: "Lege das Thermometer unter deine Zunge und schließe den Mund"
+              text: "Lege das Thermometer unter deinen Arm"
             ),
             SizedBox(height: 10),
             buildTutorialStep(
