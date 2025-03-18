@@ -1,4 +1,4 @@
-!Ovulize
+# ovulize
 
 An open-source fertility tracking app with high-precision temperature measurement for accurate cycle monitoring.
 
@@ -35,7 +35,7 @@ An open-source fertility tracking app with high-precision temperature measuremen
 
 ```bash
 # Clone the repository
-git clone https://github.com/username/ovulize.git
+git clone https://github.com/capemsx/ovulize.git
 
 # Navigate to project folder
 cd ovulize
@@ -53,14 +53,13 @@ The Ovulize app connects to a custom temperature sensor featuring:
 
 - ESP32 microcontroller
 - TMP117 high-precision temperature sensor
-- LiPo battery (300mAh+)
+- (optional) LiPo battery (300mAh+)
 
 ### Building the Sensor
 
 For sensor hardware and firmware:
 
-1. Get hardware designs and schematic: [github.com/username/ovulize-hardware](https://github.com/username/ovulize-hardware)
-2. Flash the firmware: [github.com/username/ovulize-firmware](https://github.com/username/ovulize-firmware)
+1. Get hardware designs, schematic and firmware: [github.com/capemsx/ovulize-peripheral](https://github.com/capemsx/ovulize-peripheral)
 
 Basic connections:
 ```
@@ -95,4 +94,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## ⚠️ Disclaimer
 
-Ovulize is provided for informational purposes only and is not a substitute for medical advice. Always consult healthcare professionals for medical concerns.
+Ovulize is provided for educational purposes only and is not a substitute for medical advice.
