@@ -31,21 +31,23 @@ class EncryptionHelper {
   }
 
   static String decryptData(String encryptedData) {
-    try {
-      // Extrahiere IV und verschlüsselte Daten
-      final parts = encryptedData.split(':');
-      if (parts.length != 2) {
-        throw FormatException('Ungültiges Datenformat');
-      }
-      
-      final iv = encrypt.IV(base64Decode(parts[0]));
-      final encrypted = encrypt.Encrypted(base64Decode(parts[1]));
-      
-      return encrypter.decrypt(encrypted, iv: iv);
-    } catch (e) {
-      throw Exception('Entschlüsselungsfehler: $e');
+  try {
+    // Extrahiere IV und verschlüsselte Daten
+    final parts = encryptedData.split(':');
+    if (parts.length != 2) {
+      print('Warnung: Ungültiges Datenformat für $encryptedData');
+      return encryptedData; // Einfach Originaldaten zurückgeben als Fallback
     }
+    
+    final iv = encrypt.IV(base64Decode(parts[0]));
+    final encrypted = encrypt.Encrypted(base64Decode(parts[1]));
+    
+    return encrypter.decrypt(encrypted, iv: iv);
+  } catch (e) {
+    print('Entschlüsselungsfehler: $e für Daten: $encryptedData');
+    return encryptedData; // Einfach Originaldaten zurückgeben als Fallback
   }
+}
   
   // Die restlichen Methoden bleiben unverändert
   static double? decryptDouble(String? encryptedData) {

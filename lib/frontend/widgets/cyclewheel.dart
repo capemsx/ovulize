@@ -12,7 +12,14 @@ import 'package:ovulize/globals.dart';
 import 'package:paged_vertical_calendar/utils/date_utils.dart';
 
 class CycleWheelWidget extends StatefulWidget {
-  const CycleWheelWidget({super.key});
+  final Function(CyclePhaseType phase, int cycleDay, int totalDays, int daysRemaining)? onItemChanged;
+  final Function(CycleWheelWidgetState)? cycleWheelStateCallback;
+
+  const CycleWheelWidget({
+    super.key, 
+    this.onItemChanged,
+    this.cycleWheelStateCallback,
+  });
 
   @override
   State<CycleWheelWidget> createState() => CycleWheelWidgetState();
@@ -25,27 +32,46 @@ class CycleWheelWidgetState extends State<CycleWheelWidget> {
       viewportFraction: 60 /
           MediaQueryData.fromWindow(WidgetsBinding.instance.window).size.width);
   int currentDayIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    cycleWheelController.addListener(() {
-      int newDayIndex = cycleWheelController.page?.round() ?? 0;
-      if (newDayIndex != currentDayIndex) {
-        setState(() {
-          currentDayIndex = newDayIndex;
-        });
-        HapticFeedback.heavyImpact();
+@override
+void initState() {
+  super.initState();
+  
+  // Das Callback erst nach der Build-Phase durchführen
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (widget.cycleWheelStateCallback != null) {
+      widget.cycleWheelStateCallback!(this);
+    }
+  });
+  
+  cycleWheelController.addListener(() {
+    int newDayIndex = cycleWheelController.page?.round() ?? 0;
+    if (newDayIndex != currentDayIndex) {
+      setState(() {
+        currentDayIndex = newDayIndex;
+      });
+      
+      // Callback hinzufügen für onItemChanged
+      if (widget.onItemChanged != null && newDayIndex < temperatureData.length && newDayIndex >= 0) {
+        final selectedDay = temperatureData[newDayIndex];
+        widget.onItemChanged!(
+          selectedDay.cyclePhase,
+          newDayIndex + 1, // Damit es bei 1 anfängt statt bei 0
+          temperatureData.length,
+          getLeftDaysOfCurrentPhase()
+        );
       }
-    });
+      
+      HapticFeedback.heavyImpact();
+    }
+  });
+  
+  // Verzögere die Animation leicht, um sicherzustellen, dass alles bereit ist
+  WidgetsBinding.instance.addPostFrameCallback((_) {
     animateToCurrentDay();
-  }
+  });
+}
 
-  void animateToCurrentDay() async {
-    await Future.delayed(Duration(milliseconds: 50)); //wait for visibility of animation to user
-    int pastDays = temperatureData.indexWhere((element) => element.date.isSameDay(DateTime.now()));
-    cycleWheelController.animateToPage(pastDays, duration: Duration(milliseconds: 500), curve: Curves.easeOutCubic);
-  }
+ 
 
   @override
   Widget build(BuildContext context) {
@@ -112,6 +138,11 @@ class CycleWheelWidgetState extends State<CycleWheelWidget> {
     );
   }
 
+ void animateToCurrentDay() async {
+    await Future.delayed(Duration(milliseconds: 50)); //wait for visibility of animation to user
+    int pastDays = temperatureData.indexWhere((element) => element.date.isSameDay(DateTime.now()));
+    cycleWheelController.animateToPage(pastDays, duration: Duration(milliseconds: 500), curve: Curves.easeOutCubic);
+  }
   int getLeftDaysOfCurrentPhase() {
 
     DateTime now = DateTime.now();
@@ -133,5 +164,28 @@ class CycleWheelWidgetState extends State<CycleWheelWidget> {
   int getDayCountForPhase(CyclePhaseType phaseType) {
     return temperatureData.where((element) => element.cyclePhase == phaseType).length;
   }
-
+  CyclePhaseType getCurrentPhase() {
+    if (temperatureData.isEmpty) return CyclePhaseType.uncertain;
+    
+    int todayIndex = temperatureData.indexWhere((element) => element.date.isSameDay(DateTime.now()));
+    if (todayIndex == -1) {
+      // Falls heutiger Tag nicht vorhanden, nimm den nächsten Tag
+      temperatureData.sort((a, b) => a.date.compareTo(b.date));
+      int closestIndex = 0;
+      DateTime now = DateTime.now();
+      int smallestDiff = 9999;
+      
+      for (int i = 0; i < temperatureData.length; i++) {
+        int diff = (temperatureData[i].date.difference(now).inDays).abs();
+        if (diff < smallestDiff) {
+          smallestDiff = diff;
+          closestIndex = i;
+        }
+      }
+      
+      return temperatureData[closestIndex].cyclePhase;
+    }
+    
+    return temperatureData[todayIndex].cyclePhase;
+  }
 }
