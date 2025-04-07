@@ -768,14 +768,24 @@ DateTime? _getLastMeasurementTime() {
     }
   }
 
-  void showCalendar() {
+    void showCalendar() {
     showBarModalBottomSheet(
       context: context,
       useRootNavigator: true,
       isDismissible: true,
-      builder: (context) => SizedBox(
-          height: MediaQuery.of(context).size.height * 0.8,
-          child: CycleCalendarWidget()),
+      enableDrag: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        height: MediaQuery.of(context).size.height * 0.8,
+        child: CycleCalendarWidget(),
+      ),
     );
   }
 }

@@ -19,6 +19,9 @@ class CycleCalendarWidget extends StatefulWidget {
 
 class CycleCalendarWidgetState extends State<CycleCalendarWidget> {
   List<TemperatureDay> allData = [];
+  final CyclePhasePredictor cyclePhasePredictor = CyclePhasePredictor();
+  DateTime minDate = DateTime.now().subtract(const Duration(days: 60));
+  DateTime maxDate = DateTime.now().add(const Duration(days: 60));
 
   @override
   void initState() {
@@ -27,45 +30,15 @@ class CycleCalendarWidgetState extends State<CycleCalendarWidget> {
   }
 
   void updatePredictions() {
-    // Testdaten zum Validieren
-    final testData = [
-  TemperatureDay(
-    date: DateTime.now().subtract(const Duration(days: 28)),
-    temperature: 36.4,
-    cyclePhase: CyclePhaseType.menstruation
-  ),
-  TemperatureDay(
-    date: DateTime.now().subtract(const Duration(days: 25)),
-    temperature: 36.5,
-    cyclePhase: CyclePhaseType.menstruation
-  ),
-  TemperatureDay(
-    date: DateTime.now().subtract(const Duration(days: 20)),
-    temperature: 36.6,
-    cyclePhase: CyclePhaseType.follicular
-  ),
-  TemperatureDay(
-    date: DateTime.now().subtract(const Duration(days: 14)),
-    temperature: 36.8,
-    cyclePhase: CyclePhaseType.ovulation
-  ),
-  TemperatureDay(
-    date: DateTime.now().subtract(const Duration(days: 7)),
-    temperature: 37.0,
-    cyclePhase: CyclePhaseType.luteal
-  ),
-  TemperatureDay(
-    date: DateTime.now(),
-    temperature: 36.9,
-    cyclePhase: CyclePhaseType.luteal
-  ),
-];
-
     setState(() {
-      allData = cyclePhasePredictor.predictFutureCyclePhases(
-        testData, // Zum Testen testData statt temperatureData verwenden
-        3
-      );
+      // Der Predictor sollte selbst mit leeren Daten umgehen können
+      allData = cyclePhasePredictor.predictFutureCyclePhases(temperatureData, 3);
+      
+      if (allData.isNotEmpty) {
+        allData.sort((a, b) => a.date.compareTo(b.date));
+        minDate = allData.first.date;
+        maxDate = allData.last.date;
+      }
     });
   }
 
@@ -74,28 +47,49 @@ class CycleCalendarWidgetState extends State<CycleCalendarWidget> {
     return Container(
       alignment: Alignment.center,
       child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: PagedVerticalCalendar(
-              scrollController: ModalScrollController.of(context),
-              minDate: temperatureData.first.date,
-              initialDate: DateTime.now(),
-              maxDate: temperatureData.last.date,
-              dayBuilder: (context, date) {
-                final dayData = allData.firstWhere(
-                    (element) => element.date.isSameDay(date), orElse: () {
-                  return TemperatureDay(
-                      date: date,
-                      temperature: 0.0,
-                      cyclePhase: CyclePhaseType.uncertain);
-                });
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            Expanded(
+              child: PagedVerticalCalendar(
+                scrollController: ModalScrollController.of(context),
+                minDate: minDate,
+                initialDate: DateTime.now(),
+                maxDate: maxDate,
+                dayBuilder: (context, date) {
+                  final dayData = allData.firstWhere(
+                    (element) => element.date.isSameDay(date), 
+                    orElse: () {
+                      return TemperatureDay(
+                        date: date,
+                        temperature: 0.0,
+                        cyclePhase: CyclePhaseType.uncertain
+                      );
+                    }
+                  );
 
-                return Text(
-                  date.day.toString(),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: dayData.cyclePhase.getColor() ?? Colors.grey),
-                );
-              })),
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: dayData.cyclePhase.getColor().withOpacity(0.3),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        date.day.toString(),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: date.isSameDay(DateTime.now()) ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
