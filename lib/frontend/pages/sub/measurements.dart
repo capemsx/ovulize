@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ovulize/backend/utils/encryption_helper.dart';
 import 'package:ovulize/globals.dart';
 import 'package:ovulize/backend/providers/dataprovider.dart';
 import 'package:ovulize/backend/providers/cyclephasepredictor.dart';
@@ -15,7 +16,7 @@ class MeasurementsPage extends StatefulWidget {
 class MeasurementsPageState extends State<MeasurementsPage> {
   List<TemperatureDay> temperatureList = [];
   bool isLoading = true;
-  
+
   @override
   void initState() {
     super.initState();
@@ -26,39 +27,33 @@ class MeasurementsPageState extends State<MeasurementsPage> {
     setState(() {
       isLoading = true;
     });
-    
+
     final data = await dataProvider.getTemperatureData();
-    
+
     setState(() {
       temperatureList = data;
       isLoading = false;
     });
   }
-  
-  Future<void> deleteTemperatureData(DateTime date) async {
-    await dataProvider.db.delete('TemperatureData',
-        where: 'timestamp = ?', whereArgs: [date.toIso8601String()]);
-    loadTemperatureData();
-  }
-  
+
   Future<void> _showAddRandomDataDialog() async {
-    int? numberOfDays = 30; // Standardwert
-    int? ovulationDay = 14; // Standardwert für den Eisprung (Tag 14 im Zyklus)
-    
+    int? numberOfDays = 30; // Default value
+    int? ovulationDay = 14; // Default value for ovulation (day 14 in cycle)
+
     await showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Zufällige Messdaten hinzufügen'),
+          title: Text('Add Random Measurement Data'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Wie viele Tage an Daten sollen generiert werden?'),
+              Text('How many days of data should be generated?'),
               SizedBox(height: 16),
               TextField(
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: 'Anzahl Tage',
+                  labelText: 'Number of days',
                   border: OutlineInputBorder(),
                 ),
                 onChanged: (value) {
@@ -69,14 +64,14 @@ class MeasurementsPageState extends State<MeasurementsPage> {
                 controller: TextEditingController(text: '30'),
               ),
               SizedBox(height: 16),
-              Text('An welchem Tag soll der Eisprung simuliert werden?'),
+              Text('On which day should ovulation be simulated?'),
               SizedBox(height: 8),
               TextField(
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: 'Eisprung (Tag im Zyklus)',
+                  labelText: 'Ovulation (day in cycle)',
                   border: OutlineInputBorder(),
-                  helperText: 'Standardmäßig Tag 14 eines 28-Tage-Zyklus',
+                  helperText: 'Default day 14 of a 28-day cycle',
                 ),
                 onChanged: (value) {
                   if (value.isNotEmpty) {
@@ -90,7 +85,7 @@ class MeasurementsPageState extends State<MeasurementsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Abbrechen'),
+              child: Text('Cancel'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -100,150 +95,150 @@ class MeasurementsPageState extends State<MeasurementsPage> {
                 Navigator.of(context).pop();
                 generateAndSaveRandomData(numberOfDays!, ovulationDay!);
               },
-              child: Text('Generieren'),
+              child: Text('Generate'),
             ),
           ],
         );
       },
     );
   }
-  
-  Future<void> generateAndSaveRandomData(int numberOfDays, int ovulationDay) async {
+
+  Future<void> generateAndSaveRandomData(
+      int numberOfDays, int ovulationDay) async {
     setState(() {
       isLoading = true;
     });
-    
-    // Aktuelles Datum für die Datengenerierung
+
+    // Current date for data generation
     DateTime currentDate = DateTime.now();
-    
-    // Feste Werte verwenden, die vom CyclePhasePredictor garantiert erkannt werden
-    double baseTemperature = 36.5; // Stabile Basislinie
-    
-    // Berechne den ersten Tag des simulierten Zyklus
-    DateTime cycleStartDate = currentDate.subtract(Duration(days: numberOfDays - 1));
-    
-    // Letzte generierte Temperatur speichern
+
+    // Use fixed values that are guaranteed to be recognized by CyclePhasePredictor
+    double baseTemperature = 36.5; // Stable baseline
+
+    // Calculate the first day of the simulated cycle
+    DateTime cycleStartDate =
+        currentDate.subtract(Duration(days: numberOfDays - 1));
+
+    // Store last generated temperature
     double? lastTemp;
-    
-    // Listen zum Sammeln der Daten vor dem Speichern
+
+    // Lists for collecting data before saving
     final List<DateTime> dates = [];
     final List<double> temperatures = [];
-    
-    // Erstelle die simulierten Temperaturwerte als zusammenhängendes Set
+
+    // Create simulated temperature values as a cohesive set
     for (int i = 0; i < numberOfDays; i++) {
       final date = cycleStartDate.add(Duration(days: i));
       dates.add(date);
-      
-      // Tag im Datensatz (1 bis numberOfDays)
+
+      // Day in dataset (1 to numberOfDays)
       final dayInDataset = i + 1;
-      
-      // Temperatur basierend auf Position zum gewünschten Eisprung
+
+      // Temperature based on position relative to desired ovulation
       double temperature;
-      
-      // Präzise Temperaturen anhand der vom CyclePhasePredictor erwarteten Muster
+
+      // Precise temperatures based on patterns expected by CyclePhasePredictor
       if (dayInDataset < ovulationDay - 1) {
-        // Stabile niedrige Follicular-Temperatur
+        // Stable low follicular temperature
         temperature = baseTemperature - 0.2;
-        
-        // Ersten 5 Tage als Menstruation markieren (leichter Temperaturabfall)
+
+        // Mark first 5 days as menstruation (slight temperature drop)
         if (dayInDataset <= 5) {
-          // Leichter Abfall in den ersten Tagen für Menstruation-Erkennung
+          // Slight drop in first days for menstruation detection
           temperature = baseTemperature - 0.2 + (5 - dayInDataset) * 0.02;
         }
-      } 
-      else if (dayInDataset == ovulationDay - 1) {
-        // Tag vor dem Eisprung: Temperaturtief (Nadir)
-        // Der Algorithmus sucht nach einem Abfall vor dem Anstieg
-        temperature = baseTemperature - 0.3; // Tiefer als das normale follikuläre Niveau
-      }
-      else if (dayInDataset == ovulationDay) {
-        // Tag des Eisprung: Bereits beginnender Anstieg
-        // Der Algorithmus erwartet hier schon einen signifikanten Anstieg
-        temperature = baseTemperature + 0.0; // Zurück zur Basislinie
-      }
-      else if (dayInDataset == ovulationDay + 1) {
-        // Tag nach dem Eisprung: Deutlicher Anstieg
-        // Hier erwartet der Algorithmus die größte Änderung
-        temperature = baseTemperature + 0.3; // Signifikant höher als Basislinie
-      }
-      else {
-        // Nach dem Eisprung: Stabile Lutealphase (deutlich erhöht)
+      } else if (dayInDataset == ovulationDay - 1) {
+        // Day before ovulation: Temperature low (nadir)
+        // The algorithm looks for a drop before the rise
+        temperature =
+            baseTemperature - 0.3; // Lower than normal follicular level
+      } else if (dayInDataset == ovulationDay) {
+        // Day of ovulation: Beginning rise
+        // The algorithm expects a significant rise already here
+        temperature = baseTemperature + 0.0; // Back to baseline
+      } else if (dayInDataset == ovulationDay + 1) {
+        // Day after ovulation: Clear rise
+        // The algorithm expects the biggest change here
+        temperature = baseTemperature + 0.3; // Significantly higher than baseline
+      } else {
+        // After ovulation: Stable luteal phase (clearly elevated)
         temperature = baseTemperature + 0.4;
-        
-        // Gegen Ende wieder leicht absinkend, falls genügend Tage nach Eisprung
+
+        // Slightly decreasing towards the end, if enough days after ovulation
         int daysAfterOvulation = dayInDataset - ovulationDay;
         if (daysAfterOvulation > 10) {
-          temperature = baseTemperature + 0.4 - ((daysAfterOvulation - 10) * 0.05);
+          temperature =
+              baseTemperature + 0.4 - ((daysAfterOvulation - 10) * 0.05);
         }
       }
-      
-      // Sanfte Übergänge für natürlichere Kurven, aber kein Verwischen der wichtigen Muster
+
+      // Smooth transitions for more natural curves, but without blurring important patterns
       if (lastTemp != null) {
-        // Große Änderungen nur beim Eisprung zulassen
+        // Allow large changes only during ovulation
         double maxChange;
-        
+
         if (dayInDataset == ovulationDay || dayInDataset == ovulationDay + 1) {
-          // Beim Eisprung darf es springen
+          // Allow jumps during ovulation
           maxChange = 0.3;
         } else if (dayInDataset == ovulationDay - 1) {
-          // Beim Nadir vor dem Eisprung darf es auch deutlich fallen
+          // Allow significant drop at nadir before ovulation
           maxChange = 0.2;
         } else {
-          // Ansonsten nur kleine Änderungen
+          // Otherwise only small changes
           maxChange = 0.1;
         }
-        
+
         double diff = temperature - lastTemp;
         if (diff.abs() > maxChange) {
-          // Änderung begrenzen
+          // Limit change
           temperature = lastTemp + (diff > 0 ? maxChange : -maxChange);
         }
       }
-      
-      // Exakt auf 2 Nachkommastellen runden
+
+      // Round to exactly 2 decimal places
       temperature = double.parse(temperature.toStringAsFixed(2));
       temperatures.add(temperature);
       lastTemp = temperature;
     }
-    
-    // Leere die vorherigen Daten, um eine klare Datenbasis zu haben
+
+    // Clear previous data for a clean baseline
     await dataProvider.db.delete('TemperatureData');
-    
-    // Speichere alle Werte als einheitlichen Datensatz
+
+    // Save all values as a unified dataset
     for (int i = 0; i < dates.length; i++) {
       await dataProvider.insertTemperatureData(dates[i], temperatures[i]);
     }
-    
-    // Lade und analysiere die neuen Daten
+
+    // Load and analyze the new data
     final newData = await dataProvider.getTemperatureData();
-    
-    // Analysiere mit dem CyclePhasePredictor
+
+    // Analyze with the CyclePhasePredictor
     temperatureData = cyclePhasePredictor.analyzeCurrentCycle(newData);
-    // Aktualisiere temperatureData mit Vorhersage
-    temperatureData = cyclePhasePredictor.predictFutureCyclePhases(temperatureData, 3);
-    
+    // Update temperatureData with prediction
+    temperatureData =
+        cyclePhasePredictor.predictFutureCyclePhases(temperatureData, 3);
+
     setState(() {
       temperatureList = newData;
       isLoading = false;
     });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$numberOfDays Messdaten mit eindeutigem Eisprung an Tag $ovulationDay generiert'),
-        backgroundColor: primaryColor,
-      )
-    );
+
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+          '$numberOfDays measurement data with distinct ovulation on day $ovulationDay generated'),
+      backgroundColor: primaryColor,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Vergangene Messungen'),
+        title: Text('Past Measurements'),
         actions: [
           IconButton(
             icon: Icon(Icons.science_outlined),
-            tooltip: 'Testdaten generieren',
+            tooltip: 'Generate test data',
             onPressed: _showAddRandomDataDialog,
           ),
         ],
@@ -254,21 +249,19 @@ class MeasurementsPageState extends State<MeasurementsPage> {
             child: isLoading
                 ? Center(child: CircularProgressIndicator(color: primaryColor))
                 : temperatureList.isEmpty
-                    ? Center(child: Text('Keine Messungen vorhanden'))
+                    ? Center(child: Text('No measurements available'))
                     : ListView.builder(
                         itemCount: temperatureList.length,
                         itemBuilder: (context, index) {
                           final item = temperatureList[index];
-                          final dateFormat = DateFormat('dd.MM.yyyy');
-                          
+                          final dateFormat = DateFormat('MM/dd/yyyy');
+
                           return Card(
-                            margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            margin: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
                             child: ListTile(
-                              leading: Icon(
-                                Icons.thermostat, 
-                                color: primaryColor, 
-                                size: 32
-                              ),
+                              leading: Icon(Icons.thermostat,
+                                  color: primaryColor, size: 32),
                               title: Row(
                                 children: [
                                   Text(
@@ -282,7 +275,8 @@ class MeasurementsPageState extends State<MeasurementsPage> {
                                     width: 12,
                                     height: 12,
                                     decoration: BoxDecoration(
-                                      color: item.cyclePhase.getColor() ?? Colors.grey,
+                                      color: item.cyclePhase.getColor() ??
+                                          Colors.grey,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
@@ -291,7 +285,8 @@ class MeasurementsPageState extends State<MeasurementsPage> {
                               subtitle: Text(dateFormat.format(item.date)),
                               trailing: IconButton(
                                 icon: Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => deleteTemperatureData(item.date),
+                                onPressed: () =>
+                                    deleteTemperatureData(item.date),
                               ),
                             ),
                           );
@@ -301,5 +296,42 @@ class MeasurementsPageState extends State<MeasurementsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> deleteTemperatureData(DateTime date) async {
+    try {
+      // Call new method in DataProvider
+      int count = await dataProvider.deleteTemperatureDataByDay(date);
+      
+      // Reload and update data
+      await loadTemperatureData();
+      
+      // Update temperature predictions
+      if (temperatureList.isNotEmpty) {
+        temperatureData = cyclePhasePredictor.analyzeCurrentCycle(temperatureList);
+        temperatureData = cyclePhasePredictor.predictFutureCyclePhases(temperatureData, 3);
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(count > 0 
+            ? 'Measurement from ${DateFormat('MM/dd/yyyy').format(date)} deleted' 
+            : 'Could not delete measurement. Please try again.'),
+          backgroundColor: count > 0 ? primaryColor : Colors.red,
+        ),
+      );
+    } catch (e) {
+      print('Error deleting: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 }

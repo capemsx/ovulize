@@ -128,14 +128,18 @@ class CyclePhasePredictor {
     return _determinePhases(data, cycleStartDate);
   }
   
-  double _calculateBaselineTemperature(List<TemperatureDay> data) {
-    if (data.isEmpty) return 36.5;
-    
-    final temps = data.map((d) => d.temperature).toList()..sort();
-    
-    final cutpoint = max(3, temps.length ~/ 3);
-    return temps.sublist(0, cutpoint).reduce((a, b) => a + b) / cutpoint;
-  }
+double _calculateBaselineTemperature(List<TemperatureDay> data) {
+  if (data.isEmpty) return 36.5;
+  
+  final temps = data.map((d) => d.temperature).toList()..sort();
+  
+  final cutpoint = min(temps.length, max(3, temps.length ~/ 3));
+  
+  if (temps.isEmpty) return 36.5;
+  if (cutpoint == 0) return temps[0]; // Wenn cutpoint 0 ist, gib das erste Element zurück
+  
+  return temps.sublist(0, cutpoint).reduce((a, b) => a + b) / cutpoint;
+}
   
   DateTime? _findCycleStartDate(List<TemperatureDay> data) {
     if (data.isEmpty) return null;

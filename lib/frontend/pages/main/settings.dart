@@ -5,6 +5,7 @@ import 'package:line_icons/line_icons.dart';
 import 'package:ovulize/frontend/pages/sub/measurements.dart';
 import 'package:ovulize/globals.dart';
 import 'package:package_info/package_info.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -108,7 +109,7 @@ class SettingsPageState extends State<SettingsPage> {
                 height: 10,
               ),
               settingTile(
-                  "Recent measurements",
+                  "Past measurements",
                   () {
                     Navigator.of(context).push(MaterialPageRoute(builder: (context) => MeasurementsPage()));
                   }),
@@ -116,7 +117,7 @@ class SettingsPageState extends State<SettingsPage> {
               settingTile(
                   "Imprint",
                   () {
-
+                    launchUrl(Uri.parse("https://stimm.dev/impressum.html"));
                   }),
             ],
           ),
