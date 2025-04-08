@@ -306,11 +306,9 @@ class MeasurementsPageState extends State<MeasurementsPage> {
       // Reload and update data
       await loadTemperatureData();
       
-      // Update temperature predictions
-      if (temperatureList.isNotEmpty) {
+
         temperatureData = cyclePhasePredictor.analyzeCurrentCycle(temperatureList);
         temperatureData = cyclePhasePredictor.predictFutureCyclePhases(temperatureData, 3);
-      }
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

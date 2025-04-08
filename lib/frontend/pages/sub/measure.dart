@@ -108,7 +108,7 @@ class MeasurePageState extends State<MeasurePage> {
                           height: 5,
                         ),
                         Text(
-                          "Place the sensor on your finger and press the button below to start the measurement.",
+                          "Place the sensor under your arm and press the button below to start the measurement.",
                           style: TextStyle(fontSize: 14, color: Colors.black54),
                           textAlign: TextAlign.center,
                         ),
@@ -272,6 +272,7 @@ class MeasurePageState extends State<MeasurePage> {
                                 await dataProvider.insertTemperatureData(
                                     DateTime.now(), finalValue);
                                 await thermoProvider.disconnectDevice();
+                                temperatureData = cyclePhasePredictor.predictFutureCyclePhases(await dataProvider.getTemperatureData(), 3);
                                 setState(() {
                                   done = true;
                                 });
@@ -343,7 +344,7 @@ class MeasurePageState extends State<MeasurePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              "Anleitung zur Temperaturmessung",
+              "Temperature Measurement Guide",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -354,22 +355,22 @@ class MeasurePageState extends State<MeasurePage> {
             SizedBox(height: 20),
             buildTutorialStep(
               icon: LineIcons.thermometer, 
-              text: "Lege das Thermometer unter deinen Arm"
+              text: "Place the thermometer under your arm"
             ),
             SizedBox(height: 10),
             buildTutorialStep(
               icon: LineIcons.chair, 
-              text: "Setze dich bequem und ruhig hin während der Messung"
+              text: "Sit comfortably and stay still during measurement"
             ),
             SizedBox(height: 10),
             buildTutorialStep(
               icon: LineIcons.exclamationTriangle, 
-              text: "Achte darauf, dass dein Körper keine erhöhte oder erniedrigte Temperatur hat"
+              text: "Make sure your body temperature is not elevated or lowered"
             ),
             SizedBox(height: 10),
             buildTutorialStep(
               icon: LineIcons.clock, 
-              text: "Für beste Ergebnisse, miss täglich zur gleichen Uhrzeit"
+              text: "For best results, measure at the same time each day"
             ),
             SizedBox(height: 20),
             MaterialButton(
@@ -380,7 +381,7 @@ class MeasurePageState extends State<MeasurePage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text("Verstanden"),
+              child: Text("Got it"),
               onPressed: closeTutorial,
             )
           ],

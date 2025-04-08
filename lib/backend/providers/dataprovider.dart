@@ -31,51 +31,48 @@ class DataProvider {
         .toList();
   }
 
-Future<int> deleteTemperatureDataByDay(DateTime date) async {
-  // Alle Datensätze laden
-  List<Map<String, dynamic>> allRecords = await db.query('TemperatureData');
-  List<int> recordsToDelete = [];
-  
-  // Alle Datumseinträge durchgehen und Übereinstimmungen finden
-  for (var record in allRecords) {
-    DateTime? recordDate = EncryptionHelper.decryptDateTime(record['timestamp']);
-    
-    if (recordDate != null) {
-      // Vergleich nur Datum (ohne Uhrzeit)
-      bool sameDay = recordDate.year == date.year && 
-                    recordDate.month == date.month && 
-                    recordDate.day == date.day;
-                    
-      if (sameDay) {
-        recordsToDelete.add(record['id'] as int);
+  Future<int> deleteTemperatureDataByDay(DateTime date) async {
+    // Alle Datensätze laden
+    List<Map<String, dynamic>> allRecords = await db.query('TemperatureData');
+    List<int> recordsToDelete = [];
+
+    // Alle Datumseinträge durchgehen und Übereinstimmungen finden
+    for (var record in allRecords) {
+      DateTime? recordDate =
+          EncryptionHelper.decryptDateTime(record['timestamp']);
+
+      if (recordDate != null) {
+        // Vergleich nur Datum (ohne Uhrzeit)
+        bool sameDay = recordDate.year == date.year &&
+            recordDate.month == date.month &&
+            recordDate.day == date.day;
+
+        if (sameDay) {
+          recordsToDelete.add(record['id'] as int);
+        }
       }
     }
+
+    // Gefundene Einträge löschen
+    int count = 0;
+    for (var id in recordsToDelete) {
+      count += await db.delete(
+        'TemperatureData',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+
+    return count;
   }
-  
-  // Gefundene Einträge löschen
-  int count = 0;
-  for (var id in recordsToDelete) {
-    count += await db.delete(
-      'TemperatureData',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-  
-  return count;
-}
 
   Future<void> insertTemperatureData(
       DateTime timestamp, double temperatureValue) async {
+    await deleteTemperatureDataByDay(timestamp);
+
     String encryptedDateStr = EncryptionHelper.encryptDateTime(timestamp);
     String encryptedTempValue =
         EncryptionHelper.encryptDouble(temperatureValue);
-
-    await db.delete(
-      'TemperatureData',
-      where: 'timestamp = ?',
-      whereArgs: [encryptedDateStr],
-    );
 
     await db.insert(
       'TemperatureData',

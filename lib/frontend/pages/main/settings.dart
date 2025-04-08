@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:line_icons/line_icons.dart';
 import 'package:ovulize/frontend/pages/sub/measurements.dart';
 import 'package:ovulize/globals.dart';
-import 'package:package_info/package_info.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsPage extends StatefulWidget {

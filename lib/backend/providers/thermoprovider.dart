@@ -62,14 +62,22 @@ class ThermoProvider {
 
     List<BluetoothService> services =
         await ovulizeSensor.value!.discoverServices();
+    print("Services:");
+    for (BluetoothService service in services) {
+      print(service.serviceUuid.toString());
+      for (BluetoothCharacteristic characteristic in service.characteristics) {
+        if (characteristic.characteristicUuid.toString() == "fff1") {
+          characteristic.write(utf8.encode("startTemperatureStream"));
+        }
+        if (characteristic.characteristicUuid.toString() == "fff2") {
+          dataCharacteristic = characteristic;
+        }
+      }
+    }
+    if (services.isEmpty) {
+      throw Exception("No services found");
+    }
 
-    (services.first.characteristics.firstWhere(
-      (element) => element.characteristicUuid.toString() == "fff1",
-    )).write(utf8.encode("startTemperatureStream"));
-
-    dataCharacteristic = services.first.characteristics.firstWhere(
-      (element) => element.characteristicUuid.toString() == "fff2",
-    );
     await dataCharacteristic!.setNotifyValue(true);
 
     valueSubscription = dataCharacteristic?.lastValueStream.listen((value) {
