@@ -53,12 +53,12 @@ class CycleCalendarWidgetState extends State<CycleCalendarWidget> {
             Expanded(
               child: PagedVerticalCalendar(
                 scrollController: ModalScrollController.of(context),
-                minDate: minDate,
+                minDate: DateTime.now(),
                 initialDate: DateTime.now(),
                 maxDate: maxDate,
                 dayBuilder: (context, date) {
                   final dayData = allData.firstWhere(
-                    (element) => element.date.isSameDay(date), 
+                    (element) => element.date.isSameDay(date) && element.date.isAfter(DateTime.now().copyWith(hour: 0, minute: 0, second: 0)), 
                     orElse: () {
                       return TemperatureDay(
                         date: date,

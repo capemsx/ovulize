@@ -63,23 +63,7 @@ class MeasurementsPageState extends State<MeasurementsPage> {
                 },
                 controller: TextEditingController(text: '30'),
               ),
-              SizedBox(height: 16),
-              Text('On which day should ovulation be simulated?'),
-              SizedBox(height: 8),
-              TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Ovulation (day in cycle)',
-                  border: OutlineInputBorder(),
-                  helperText: 'Default day 14 of a 28-day cycle',
-                ),
-                onChanged: (value) {
-                  if (value.isNotEmpty) {
-                    ovulationDay = int.tryParse(value) ?? 14;
-                  }
-                },
-                controller: TextEditingController(text: '14'),
-              ),
+              
             ],
           ),
           actions: [
@@ -93,7 +77,7 @@ class MeasurementsPageState extends State<MeasurementsPage> {
               ),
               onPressed: () {
                 Navigator.of(context).pop();
-                generateAndSaveRandomData(numberOfDays!, ovulationDay!);
+                generateAndSaveRandomData(numberOfDays!, 1);
               },
               child: Text('Generate'),
             ),
@@ -247,7 +231,7 @@ class MeasurementsPageState extends State<MeasurementsPage> {
             TextField(
               keyboardType: TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                labelText: 'Temperaturr (°C)',
+                labelText: 'Temperature (°C)',
                 border: OutlineInputBorder(),
                 helperText: 'e.g. 36.5',
               ),
@@ -391,16 +375,7 @@ Future<void> addTemperatureData(DateTime date, double temperature) async {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  SizedBox(width: 8),
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      color: item.cyclePhase.getColor() ??
-                                          Colors.grey,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
+
                                 ],
                               ),
                               subtitle: Text(dateFormat.format(item.date)),

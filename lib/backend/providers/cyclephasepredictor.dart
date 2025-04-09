@@ -1,11 +1,8 @@
 import 'dart:math';
-
 import 'package:ml_algo/ml_algo.dart';
 import 'package:ml_dataframe/ml_dataframe.dart';
-import 'package:ovulize/backend/types/cycle.dart';
 import 'package:ovulize/backend/types/cyclephase.dart';
 import 'package:ovulize/backend/types/cyclephasetype.dart';
-import 'package:ovulize/globals.dart';
 
 class TemperatureDay {
   final DateTime date;
@@ -31,13 +28,10 @@ class CyclePhasePredictor {
   LogisticRegressor? model;
   DataFrame? trainingData;
   bool isModelTrained = false;
-  
   int averageCycleLength = 28;
   double? baselineTemperature;
-  
   DateTime? _lastCycleStart;
   List<int> _recentCycleLengths = [];
-  
   int _menstruationLength = 5;
   int _follicularLength = 8;
   int _ovulationLength = 3;
@@ -48,38 +42,21 @@ class CyclePhasePredictor {
   }
 
   void _initializeModel() {
-    final List<List<dynamic>> sampleData = [
+    final sampleData = [
       ['tempDiffFromBaseline', 'trendLast3Days', 'trendLast7Days', 'daysFromCycleStart', 'phase'],
-      // Menstruation
-      [-0.1, -0.05, -0.05, 1, 0],
-      [-0.1, -0.02, -0.03, 3, 0],
-      [-0.05, 0.0, -0.01, 5, 0],
-      // Follicular phase
-      [-0.2, -0.05, -0.03, 7, 1],
-      [-0.2, 0.0, -0.01, 10, 1],
-      [-0.1, 0.05, 0.02, 13, 1],
-      // Ovulation 
-      [0.1, 0.15, 0.05, 14, 2],
-      [0.3, 0.25, 0.1, 15, 2],
-      [0.5, 0.15, 0.15, 16, 2],
-      // Luteal phase
-      [0.5, 0.05, 0.2, 17, 3],
-      [0.4, 0.0, 0.15, 22, 3],
-      [0.2, -0.05, 0.05, 27, 3],
+      [-0.1, -0.05, -0.05, 1, 0], [-0.1, -0.02, -0.03, 3, 0], [-0.05, 0.0, -0.01, 5, 0],
+      [-0.2, -0.05, -0.03, 7, 1], [-0.2, 0.0, -0.01, 10, 1], [-0.1, 0.05, 0.02, 13, 1],
+      [0.1, 0.15, 0.05, 14, 2], [0.3, 0.25, 0.1, 15, 2], [0.5, 0.15, 0.15, 16, 2],
+      [0.5, 0.05, 0.2, 17, 3], [0.4, 0.0, 0.15, 22, 3], [0.2, -0.05, 0.05, 27, 3],
     ];
-    
-    final List<List<dynamic>> balancedData = [sampleData[0]];
-    
-    for (int phaseIndex = 0; phaseIndex < 4; phaseIndex++) {
-      int startIdx = 1 + (phaseIndex * 3);
-      int endIdx = startIdx + 2;
-      
-      for (int i = startIdx; i <= endIdx; i++) {
-        balancedData.add(List.from(sampleData[i]));
-        
-        int variations = phaseIndex == 2 ? 4 : 2;
-        for (int j = 0; j < variations; j++) {
-          balancedData.add(_addVariation(List.from(sampleData[i])));
+
+    final balancedData = [sampleData[0]];
+    for (int i = 0; i < 4; i++) {
+      for (int j = 1 + (i * 3); j <= 3 + (i * 3); j++) {
+        balancedData.add(List.from(sampleData[j]));
+        int variations = i == 2 ? 4 : 2;
+        for (int k = 0; k < variations; k++) {
+          balancedData.add(_addVariation(List.from(sampleData[j])));
         }
       }
     }
@@ -87,27 +64,23 @@ class CyclePhasePredictor {
     trainingData = DataFrame(balancedData, headerExists: true);
     _trainModel();
   }
-  
-  List<dynamic> _addVariation(List<dynamic> data) {
+
+   List<Object> _addVariation(List<Object> data) {
     final rand = Random();
     for (int i = 0; i < data.length - 1; i++) {
-      if (data[i] is num) {
-        data[i] = (data[i] as num) + (rand.nextDouble() * 0.12 - 0.06); //+-0.06
-      }
+      if (data[i] is num) data[i] = (data[i] as num) + (rand.nextDouble() * 0.12 - 0.06);
     }
     return data;
   }
-  
+
   void _trainModel() {
     if (trainingData == null) return;
-    
     model = LogisticRegressor(trainingData!, "phase",
-      optimizerType: LinearOptimizerType.gradient,
-      iterationsLimit: 2000,
-      learningRateType: LearningRateType.constant,
-      initialLearningRate: 0.03,
-      fitIntercept: true);
-    
+        optimizerType: LinearOptimizerType.gradient,
+        iterationsLimit: 2000,
+        learningRateType: LearningRateType.constant,
+        initialLearningRate: 0.03,
+        fitIntercept: true);
     isModelTrained = true;
   }
 
@@ -115,157 +88,172 @@ class CyclePhasePredictor {
     if (rawData.isEmpty) return [];
     
     final data = List<TemperatureDay>.from(rawData)..sort((a, b) => a.date.compareTo(b.date));
-    
     baselineTemperature = _calculateBaselineTemperature(data);
-    final cycleStartDate = _findCycleStartDate(data);
+    _preProcessPhaseDetection(data);
     
-    if (_lastCycleStart != null && 
-        cycleStartDate != null && 
-        cycleStartDate != _lastCycleStart) {
+    final cycleStartDate = _findCycleStartDate(data);
+    if (_lastCycleStart != null && cycleStartDate != null && cycleStartDate != _lastCycleStart) {
       _updateCycleLength(cycleStartDate);
     }
     
     return _determinePhases(data, cycleStartDate);
   }
-  
+
+  void _preProcessPhaseDetection(List<TemperatureDay> data) {
+    if (data.length < 7) return;
+    
+    double recentAvg = 0;
+    int count = 0;
+    
+    for (int i = data.length - 1; i >= max(0, data.length - 7); i--) {
+      recentAvg += data[i].temperature;
+      count++;
+    }
+    recentAvg /= count;
+
+    for (int i = data.length - 1; i >= max(0, data.length - 4); i--) {
+      if (data[i].cyclePhase == CyclePhaseType.uncertain) {
+        if (data[i].temperature >= baselineTemperature! + 0.3) {
+          data[i].cyclePhase = CyclePhaseType.luteal;
+        } else if (i > 0 && i < data.length - 1 && 
+                  data[i].temperature < baselineTemperature! - 0.2 &&
+                  data[i+1].temperature > data[i].temperature + 0.2) {
+          data[i].cyclePhase = CyclePhaseType.ovulation;
+        }
+      }
+    }
+  }
+
   double _calculateBaselineTemperature(List<TemperatureDay> data) {
-    if (data.isEmpty) return 36.5;
-    
+    if (data.isEmpty || data.length < 3) return 36.5;
     final temps = data.map((d) => d.temperature).toList()..sort();
-    
     final cutpoint = max(3, temps.length ~/ 3);
     return temps.sublist(0, cutpoint).reduce((a, b) => a + b) / cutpoint;
   }
-  
+
   DateTime? _findCycleStartDate(List<TemperatureDay> data) {
     if (data.isEmpty) return null;
-    
+
     for (int i = data.length - 1; i >= 0; i--) {
       if (data[i].cyclePhase == CyclePhaseType.menstruation) {
         int startIdx = i;
-        while (startIdx > 0 && 
-               data[startIdx - 1].cyclePhase == CyclePhaseType.menstruation && //find most recent menstruation
+        while (startIdx > 0 &&
+               data[startIdx - 1].cyclePhase == CyclePhaseType.menstruation &&
                data[startIdx].date.difference(data[startIdx - 1].date).inDays <= 3) {
           startIdx--;
         }
-        
         _lastCycleStart = data[startIdx].date;
         return data[startIdx].date;
       }
     }
-    
+
+    List<int> potentialStartIndices = [];
+    for (int i = 1; i < data.length; i++) {
+      if (i > 1 && data[i].temperature < data[i - 1].temperature && 
+          data[i].temperature < baselineTemperature!) {
+        potentialStartIndices.add(i);
+      }
+    }
+
+    if (potentialStartIndices.isNotEmpty) {
+      int lastStart = potentialStartIndices.last;
+      _lastCycleStart = data[lastStart].date;
+      
+      for (int j = lastStart; j < data.length && j < lastStart + 5; j++) {
+        if (j < data.length && data[j].cyclePhase == CyclePhaseType.uncertain) {
+          data[j].cyclePhase = CyclePhaseType.menstruation;
+        }
+      }
+      return data[lastStart].date;
+    }
+
+    _lastCycleStart = data.first.date;
     return data.first.date;
   }
-  
+
   void _updateCycleLength(DateTime newCycleStart) {
     if (_lastCycleStart == null) return;
-    
     final cycleDuration = newCycleStart.difference(_lastCycleStart!).inDays;
     if (cycleDuration >= 21 && cycleDuration <= 40) {
       _recentCycleLengths.add(cycleDuration);
-      
-      if (_recentCycleLengths.length > 5) {
-        _recentCycleLengths.removeAt(0);
-      }
-      
+      if (_recentCycleLengths.length > 5) _recentCycleLengths.removeAt(0);
       if (_recentCycleLengths.isNotEmpty) {
-        int sum = _recentCycleLengths.reduce((a, b) => a + b);
-        averageCycleLength = sum ~/ _recentCycleLengths.length;
+        averageCycleLength = _recentCycleLengths.reduce((a, b) => a + b) ~/ _recentCycleLengths.length;
         _updatePhaseDistribution();
       }
     }
-    
     _lastCycleStart = newCycleStart;
   }
-  
+
   void _updatePhaseDistribution() {
     _lutealLength = 13;
     _menstruationLength = 5;
     _ovulationLength = 3;
-    _follicularLength = averageCycleLength - (_menstruationLength + _ovulationLength + _lutealLength); //most variable phase
+    _follicularLength = averageCycleLength - (_menstruationLength + _ovulationLength + _lutealLength);
     _follicularLength = max(5, _follicularLength);
   }
-  
-  double _calculateTrend(List<double> temperatures, [int maxDays = 3]) {
-    if (temperatures.length <= 1) return 0.0;
+
+  double _calculateTrend(List<double> temps, [int maxDays = 3]) {
+    if (temps.length <= 1) return 0.0;
+    final days = min(maxDays, temps.length);
+    final recent = temps.sublist(temps.length - days);
     
-    final daysToConsider = min(maxDays, temperatures.length);
-    final recentTemps = temperatures.sublist(temperatures.length - daysToConsider);
-    
-    if (recentTemps.length >= 3) {
-      double weightedSum = 0;
-      double weights = 0;
-      
-      for (int i = 0; i < recentTemps.length - 1; i++) {
-        final weight = i + 1;
-        weightedSum += (recentTemps[i + 1] - recentTemps[i]) * weight;
-        weights += weight;
+    if (recent.length >= 3) {
+      double wSum = 0, weights = 0;
+      for (int i = 0; i < recent.length - 1; i++) {
+        final w = i + 1;
+        wSum += (recent[i + 1] - recent[i]) * w;
+        weights += w;
       }
-      //weighted to improve importance of most recent values
-      
-      return weights > 0 ? weightedSum / weights : 0;
+      return weights > 0 ? wSum / weights : 0;
     }
-    
-    return recentTemps.last - recentTemps.first;
+    return recent.last - recent.first;
   }
-  
-  List<TemperatureDay> _determinePhases(
-    List<TemperatureDay> data, 
-    DateTime? cycleStartDate
-  ) {
+
+  List<TemperatureDay> _determinePhases(List<TemperatureDay> data, DateTime? cycleStartDate) {
     if (data.isEmpty) return [];
     cycleStartDate ??= data.first.date;
-    
     final result = <TemperatureDay>[];
-    
+
     for (int i = 0; i < data.length; i++) {
       final day = data[i];
-      
-      // Calculate features for ML model
       final tempDiff = day.temperature - (baselineTemperature ?? 36.5);
-      
-      double trendShort = 0;
-      double trendLong = 0;
-      
+      double trendShort = 0, trendLong = 0;
+
       if (i > 0) {
         final shortWindow = data.sublist(max(0, i - min(i, 3)), i + 1);
         final longWindow = data.sublist(max(0, i - min(i, 7)), i + 1);
-        
         trendShort = _calculateTrend(shortWindow.map((d) => d.temperature).toList());
         trendLong = _calculateTrend(longWindow.map((d) => d.temperature).toList(), 7);
       }
-      
+
       final daysFromStart = day.date.difference(cycleStartDate).inDays % averageCycleLength + 1;
-      
-      // Only predict phase if not manually set
-      CyclePhaseType detectedPhase = day.cyclePhase;
-      
-      if (detectedPhase == CyclePhaseType.uncertain && model != null && isModelTrained) {
+      CyclePhaseType phase = day.cyclePhase;
+
+      if (phase == CyclePhaseType.uncertain && model != null && isModelTrained) {
         try {
           final prediction = model!.predict(DataFrame([
             ['tempDiffFromBaseline', 'trendLast3Days', 'trendLast7Days', 'daysFromCycleStart'],
             [tempDiff, trendShort, trendLong, daysFromStart],
           ]));
-          
           final mlPhase = prediction.rows.first.first.toInt();
-          
           if (mlPhase >= 0 && mlPhase < CyclePhaseType.values.length) {
-            detectedPhase = CyclePhaseType.values[mlPhase];
+            phase = CyclePhaseType.values[mlPhase];
           }
         } catch (e) {
-          // Fallback if ML fails - use calendar method
+          // Fallback to calendar
           if (daysFromStart <= _menstruationLength) {
-            detectedPhase = CyclePhaseType.menstruation;
+            phase = CyclePhaseType.menstruation;
           } else if (daysFromStart <= _menstruationLength + _follicularLength) {
-            detectedPhase = CyclePhaseType.follicular;
+            phase = CyclePhaseType.follicular;
           } else if (daysFromStart <= _menstruationLength + _follicularLength + _ovulationLength) {
-            detectedPhase = CyclePhaseType.ovulation;
+            phase = CyclePhaseType.ovulation;
           } else {
-            detectedPhase = CyclePhaseType.luteal;
+            phase = CyclePhaseType.luteal;
           }
         }
       }
-      
+
       result.add(TemperatureDay(
         date: day.date,
         temperature: day.temperature,
@@ -273,30 +261,22 @@ class CyclePhasePredictor {
         trendLast3Days: trendShort,
         trendLast7Days: trendLong,
         daysFromCycleStart: daysFromStart,
-        cyclePhase: detectedPhase,
+        cyclePhase: phase,
       ));
     }
-    
     return result;
   }
-  
-  List<TemperatureDay> predictFutureCyclePhases(
-      List<TemperatureDay> historicalData, int monthsInFuture) {
-    if (historicalData.isEmpty) return [];
-    
-    List<TemperatureDay> analyzedData = analyzeCurrentCycle(historicalData);
-    
-    DateTime lastDate = analyzedData.last.date;
-    DateTime cycleStartDate = _findCycleStartDate(analyzedData) ?? lastDate;
-    
-    Map<int, CyclePhaseType> cyclePattern = _createCyclePattern();
-    
-    return _generateFutureDays(analyzedData, cycleStartDate, cyclePattern, monthsInFuture);
+
+  List<TemperatureDay> predictFutureCyclePhases(List<TemperatureDay> history, int months) {
+    if (history.isEmpty) return [];
+    List<TemperatureDay> analyzed = analyzeCurrentCycle(history);
+    DateTime cycleStart = _findCycleStartDate(analyzed) ?? analyzed.last.date;
+    Map<int, CyclePhaseType> pattern = _createCyclePattern();
+    return _generateFutureDays(analyzed, cycleStart, pattern, months);
   }
-  
+
   Map<int, CyclePhaseType> _createCyclePattern() {
-    final Map<int, CyclePhaseType> pattern = {};
-    
+    final pattern = <int, CyclePhaseType>{};
     for (int day = 1; day <= averageCycleLength; day++) {
       if (day <= _menstruationLength) {
         pattern[day] = CyclePhaseType.menstruation;
@@ -308,157 +288,112 @@ class CyclePhasePredictor {
         pattern[day] = CyclePhaseType.luteal;
       }
     }
-    
     return pattern;
   }
-  
-  List<TemperatureDay> _generateFutureDays(
-      List<TemperatureDay> analyzedData,
-      DateTime cycleStartDate,
-      Map<int, CyclePhaseType> cyclePattern,
-      int monthsInFuture) {
+
+  List<TemperatureDay> _generateFutureDays(List<TemperatureDay> data, DateTime cycleStart, 
+      Map<int, CyclePhaseType> pattern, int months) {
+    List<TemperatureDay> all = List.from(data);
+    DateTime currentStart = cycleStart;
+
+    for (int i = 0; i < months * 30; i++) {
+      final next = all.last.date.add(const Duration(days: 1));
+      final days = next.difference(currentStart).inDays % averageCycleLength + 1;
+      final phase = pattern[days] ?? CyclePhaseType.uncertain;
+      final values = _generateTempValues(phase, days, baselineTemperature ?? 36.5);
       
-    List<TemperatureDay> allData = List.from(analyzedData);
-    int daysToPredict = monthsInFuture * 30;
-    DateTime currentCycleStart = cycleStartDate;
-    
-    for (int i = 0; i < daysToPredict; i++) {
-      final nextDate = allData.last.date.add(const Duration(days: 1));
-      
-      final daysFromStart = nextDate.difference(currentCycleStart).inDays % averageCycleLength + 1;
-      final phase = cyclePattern[daysFromStart] ?? CyclePhaseType.uncertain;
-      
-      final temperatureValues = _generateTemperatureForPhase(
-        phase, 
-        daysFromStart, 
-        baselineTemperature ?? 36.5
-      );
-      
-      final nextDay = TemperatureDay(
-        date: nextDate,
-        temperature: temperatureValues.temp,
-        tempDiffFromBaseline: temperatureValues.diff,
-        trendLast3Days: temperatureValues.trendShort,
-        trendLast7Days: temperatureValues.trendLong,
-        daysFromCycleStart: daysFromStart,
+      all.add(TemperatureDay(
+        date: next,
+        temperature: values.temp,
+        tempDiffFromBaseline: values.diff,
+        trendLast3Days: values.trendShort,
+        trendLast7Days: values.trendLong,
+        daysFromCycleStart: days,
         cyclePhase: phase,
-      );
-      
-      allData.add(nextDay);
-      
-      if (daysFromStart == averageCycleLength) {
-        currentCycleStart = nextDate.add(const Duration(days: 1));
+      ));
+
+      if (days == averageCycleLength) {
+        currentStart = next.add(const Duration(days: 1));
       }
     }
-    
-    return allData;
+    return all;
   }
-  
-  //bunch of hardcode :((
-  _TemperatureValues _generateTemperatureForPhase(
-      CyclePhaseType phase, int daysFromStart, double baseline) {
-    
-    double tempDiff = 0.0;
-    double trendShort = 0.0;
-    double trendLong = 0.0;
+
+  _TempValues _generateTempValues(CyclePhaseType phase, int days, double baseline) {
     final rand = Random();
+    double diff = 0, trendS = 0, trendL = 0;
     
     switch (phase) {
       case CyclePhaseType.menstruation:
-        double progress = daysFromStart / _menstruationLength;
-        tempDiff = -0.15 + progress * 0.1 + (rand.nextDouble() * 0.08 - 0.04);
-        trendShort = -0.05 + progress * 0.1;
-        trendLong = -0.02 + progress * 0.02;
+        double p = days / _menstruationLength;
+        diff = -0.15 + p * 0.1 + (rand.nextDouble() * 0.08 - 0.04);
+        trendS = -0.05 + p * 0.1;
+        trendL = -0.02 + p * 0.02;
         break;
-        
       case CyclePhaseType.follicular:
-        double relativePos = (daysFromStart - _menstruationLength) / _follicularLength;
-        tempDiff = -0.2 + relativePos * 0.2 + (rand.nextDouble() * 0.06 - 0.03);
-        trendShort = 0.0 + relativePos * 0.1;
-        trendLong = 0.01 + relativePos * 0.03;
+        double p = (days - _menstruationLength) / _follicularLength;
+        diff = -0.2 + p * 0.2 + (rand.nextDouble() * 0.06 - 0.03);
+        trendS = 0.0 + p * 0.1;
+        trendL = 0.01 + p * 0.03;
         break;
-        
       case CyclePhaseType.ovulation:
-        double ovuProgress = (daysFromStart - (_menstruationLength + _follicularLength)) / _ovulationLength;
-        
-        if (ovuProgress < 0.33) {
-          tempDiff = -0.1 + (rand.nextDouble() * 0.05);
-          trendShort = -0.1;
-        } else if (ovuProgress < 0.66) {
-          tempDiff = 0.1 + (rand.nextDouble() * 0.1);
-          trendShort = 0.2;
+        double p = (days - (_menstruationLength + _follicularLength)) / _ovulationLength;
+        if (p < 0.33) {
+          diff = -0.1 + (rand.nextDouble() * 0.05);
+          trendS = -0.1;
+        } else if (p < 0.66) {
+          diff = 0.1 + (rand.nextDouble() * 0.1);
+          trendS = 0.2;
         } else {
-          tempDiff = 0.3 + (rand.nextDouble() * 0.1);
-          trendShort = 0.2;
+          diff = 0.3 + (rand.nextDouble() * 0.1);
+          trendS = 0.2;
         }
-        trendLong = 0.1;
+        trendL = 0.1;
         break;
-        
       case CyclePhaseType.luteal:
-        double lutealProgress = (daysFromStart - (_menstruationLength + _follicularLength + _ovulationLength)) / _lutealLength;
-        tempDiff = 0.4 - lutealProgress * 0.3 + (rand.nextDouble() * 0.08 - 0.04);
-        trendShort = (rand.nextDouble() * 0.08 - 0.04) - lutealProgress * 0.1;
-        trendLong = -0.05 * lutealProgress;
+        double p = (days - (_menstruationLength + _follicularLength + _ovulationLength)) / _lutealLength;
+        diff = 0.4 - p * 0.3 + (rand.nextDouble() * 0.08 - 0.04);
+        trendS = (rand.nextDouble() * 0.08 - 0.04) - p * 0.1;
+        trendL = -0.05 * p;
         break;
-        
-      case CyclePhaseType.uncertain:
       default:
-        tempDiff = 0.0;
-        trendShort = 0.0;
-        trendLong = 0.0;
+        break;
     }
-    
-    final temperature = baseline + tempDiff;
-    
-    return _TemperatureValues(
-      temp: double.parse(temperature.toStringAsFixed(2)),
-      diff: double.parse(tempDiff.toStringAsFixed(2)),
-      trendShort: double.parse(trendShort.toStringAsFixed(2)),
-      trendLong: double.parse(trendLong.toStringAsFixed(2))
+
+    final temp = baseline + diff;
+    return _TempValues(
+      temp: double.parse(temp.toStringAsFixed(2)),
+      diff: double.parse(diff.toStringAsFixed(2)),
+      trendShort: double.parse(trendS.toStringAsFixed(2)),
+      trendLong: double.parse(trendL.toStringAsFixed(2))
     );
   }
-  
+
   void updateModelWithNewData(TemperatureDay day) {
-    if (trainingData == null) return;
+    if (trainingData == null || day.cyclePhase == CyclePhaseType.uncertain) return;
     
-    if (day.cyclePhase != CyclePhaseType.uncertain) {
-      baselineTemperature ??= day.temperature;
-      
-      final tempDiff = day.temperature - baselineTemperature!;
-      final cycleStartDate = _lastCycleStart ?? day.date;
-      final daysFromStart = day.date.difference(cycleStartDate).inDays % averageCycleLength + 1;
-      
-      final newData = DataFrame([
-        ['tempDiffFromBaseline', 'trendLast3Days', 'trendLast7Days', 'daysFromCycleStart', 'phase'],
-        [
-          tempDiff,
-          day.trendLast3Days ?? 0.0,
-          day.trendLast7Days ?? 0.0,
-          daysFromStart,
-          CyclePhaseType.values.indexOf(day.cyclePhase)
-        ],
-      ], headerExists: true);
-      
-      trainingData = DataFrame(
-        [...trainingData!.rows, ...newData.rows.skip(1)], 
-        headerExists: true
-      );
-      
-      _trainModel();
-    }
+    baselineTemperature ??= day.temperature;
+    final diff = day.temperature - baselineTemperature!;
+    final cycleStart = _lastCycleStart ?? day.date;
+    final days = day.date.difference(cycleStart).inDays % averageCycleLength + 1;
+    
+    final newData = DataFrame([
+      ['tempDiffFromBaseline', 'trendLast3Days', 'trendLast7Days', 'daysFromCycleStart', 'phase'],
+      [diff, day.trendLast3Days ?? 0.0, day.trendLast7Days ?? 0.0, days, 
+       CyclePhaseType.values.indexOf(day.cyclePhase)],
+    ], headerExists: true);
+    
+    trainingData = DataFrame([...trainingData!.rows, ...newData.rows.skip(1)], headerExists: true);
+    _trainModel();
   }
 }
 
-class _TemperatureValues {
+class _TempValues {
   final double temp;
   final double diff;
   final double trendShort;
   final double trendLong;
-  
-  _TemperatureValues({
-    required this.temp, 
-    required this.diff,
-    required this.trendShort,
-    required this.trendLong
-  });
+
+  _TempValues({required this.temp, required this.diff, 
+              required this.trendShort, required this.trendLong});
 }
