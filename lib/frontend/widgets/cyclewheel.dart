@@ -36,7 +36,6 @@ class CycleWheelWidgetState extends State<CycleWheelWidget> {
 void initState() {
   super.initState();
   
-  // Das Callback erst nach der Build-Phase durchführen
   WidgetsBinding.instance.addPostFrameCallback((_) {
     if (widget.cycleWheelStateCallback != null) {
       widget.cycleWheelStateCallback!(this);
@@ -50,7 +49,6 @@ void initState() {
         currentDayIndex = newDayIndex;
       });
       
-      // Callback hinzufügen für onItemChanged
       if (widget.onItemChanged != null && newDayIndex < temperatureData.length && newDayIndex >= 0) {
         final selectedDay = temperatureData[newDayIndex];
         widget.onItemChanged!(
@@ -65,7 +63,6 @@ void initState() {
     }
   });
   
-  // Verzögere die Animation leicht, um sicherzustellen, dass alles bereit ist
   WidgetsBinding.instance.addPostFrameCallback((_) {
     animateToCurrentDay();
   });

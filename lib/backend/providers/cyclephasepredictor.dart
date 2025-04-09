@@ -92,7 +92,7 @@ class CyclePhasePredictor {
     final rand = Random();
     for (int i = 0; i < data.length - 1; i++) {
       if (data[i] is num) {
-        data[i] = (data[i] as num) + (rand.nextDouble() * 0.12 - 0.06);
+        data[i] = (data[i] as num) + (rand.nextDouble() * 0.12 - 0.06); //+-0.06
       }
     }
     return data;
@@ -128,18 +128,14 @@ class CyclePhasePredictor {
     return _determinePhases(data, cycleStartDate);
   }
   
-double _calculateBaselineTemperature(List<TemperatureDay> data) {
-  if (data.isEmpty) return 36.5;
-  
-  final temps = data.map((d) => d.temperature).toList()..sort();
-  
-  final cutpoint = min(temps.length, max(3, temps.length ~/ 3));
-  
-  if (temps.isEmpty) return 36.5;
-  if (cutpoint == 0) return temps[0]; // Wenn cutpoint 0 ist, gib das erste Element zurück
-  
-  return temps.sublist(0, cutpoint).reduce((a, b) => a + b) / cutpoint;
-}
+  double _calculateBaselineTemperature(List<TemperatureDay> data) {
+    if (data.isEmpty) return 36.5;
+    
+    final temps = data.map((d) => d.temperature).toList()..sort();
+    
+    final cutpoint = max(3, temps.length ~/ 3);
+    return temps.sublist(0, cutpoint).reduce((a, b) => a + b) / cutpoint;
+  }
   
   DateTime? _findCycleStartDate(List<TemperatureDay> data) {
     if (data.isEmpty) return null;
@@ -148,7 +144,7 @@ double _calculateBaselineTemperature(List<TemperatureDay> data) {
       if (data[i].cyclePhase == CyclePhaseType.menstruation) {
         int startIdx = i;
         while (startIdx > 0 && 
-               data[startIdx - 1].cyclePhase == CyclePhaseType.menstruation &&
+               data[startIdx - 1].cyclePhase == CyclePhaseType.menstruation && //find most recent menstruation
                data[startIdx].date.difference(data[startIdx - 1].date).inDays <= 3) {
           startIdx--;
         }
@@ -186,7 +182,7 @@ double _calculateBaselineTemperature(List<TemperatureDay> data) {
     _lutealLength = 13;
     _menstruationLength = 5;
     _ovulationLength = 3;
-    _follicularLength = averageCycleLength - (_menstruationLength + _ovulationLength + _lutealLength);
+    _follicularLength = averageCycleLength - (_menstruationLength + _ovulationLength + _lutealLength); //most variable phase
     _follicularLength = max(5, _follicularLength);
   }
   
@@ -205,6 +201,7 @@ double _calculateBaselineTemperature(List<TemperatureDay> data) {
         weightedSum += (recentTemps[i + 1] - recentTemps[i]) * weight;
         weights += weight;
       }
+      //weighted to improve importance of most recent values
       
       return weights > 0 ? weightedSum / weights : 0;
     }
@@ -357,6 +354,7 @@ double _calculateBaselineTemperature(List<TemperatureDay> data) {
     return allData;
   }
   
+  //bunch of hardcode :((
   _TemperatureValues _generateTemperatureForPhase(
       CyclePhaseType phase, int daysFromStart, double baseline) {
     

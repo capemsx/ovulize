@@ -90,7 +90,7 @@ class DashboardPageState extends State<DashboardPage>
             // Oberer Bereich - Aktuelle Phase
             SliverToBoxAdapter(
               child: Container(
-                height: availableHeight * 0.38,
+                height: availableHeight * 0.5,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
@@ -109,30 +109,33 @@ class DashboardPageState extends State<DashboardPage>
                       return Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.9),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.9),
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isInitialized
+                                        ? currentPhase.getColor().withOpacity(0.5)
+                                        : Colors.grey.withOpacity(0.5),
+                                    blurRadius: 15,
+                                    spreadRadius: 2,
+                                  )
+                                ],
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  _getPhaseIcon(),
+                                  size: 40 *
+                                      _animationController.value.clamp(0.1, 1.0),
                                   color: isInitialized
-                                      ? currentPhase.getColor().withOpacity(0.5)
-                                      : Colors.grey.withOpacity(0.5),
-                                  blurRadius: 15,
-                                  spreadRadius: 2,
-                                )
-                              ],
-                            ),
-                            child: Center(
-                              child: Icon(
-                                _getPhaseIcon(),
-                                size: 40 *
-                                    _animationController.value.clamp(0.1, 1.0),
-                                color: isInitialized
-                                    ? currentPhase.getColor()
-                                    : Colors.grey,
+                                      ? currentPhase.getColor()
+                                      : Colors.grey,
+                                ),
                               ),
                             ),
                           ),

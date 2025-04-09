@@ -103,6 +103,8 @@ class MeasurementsPageState extends State<MeasurementsPage> {
     );
   }
 
+  
+
   Future<void> generateAndSaveRandomData(
       int numberOfDays, int ovulationDay) async {
     setState(() {
@@ -230,8 +232,121 @@ class MeasurementsPageState extends State<MeasurementsPage> {
     ));
   }
 
+  Future<void> _showAddMeasurementDialog() async {
+  double? temperatureValue;
+  DateTime selectedDate = DateTime.now();
+
+  await showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Add measurement manually'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Temperaturr (°C)',
+                border: OutlineInputBorder(),
+                helperText: 'e.g. 36.5',
+              ),
+              onChanged: (value) {
+                if (value.isNotEmpty) {
+                  temperatureValue = double.tryParse(value.replaceAll(',', '.'));
+                }
+              },
+            ),
+            SizedBox(height: 16),
+            Text('Date of measurement'),
+            SizedBox(height: 8),
+            InkWell(
+              onTap: () async {
+                final DateTime? picked = await showDatePicker(
+                  context: context,
+                  initialDate: selectedDate,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
+                );
+                if (picked != null && picked != selectedDate) {
+                  selectedDate = picked;
+                  (context as Element).markNeedsBuild();
+                }
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey.shade400),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(DateFormat('dd.MM.yyyy').format(selectedDate)),
+                    Icon(Icons.calendar_today),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+            ),
+            onPressed: () {
+              if (temperatureValue != null) {
+                Navigator.of(context).pop();
+                addTemperatureData(selectedDate, temperatureValue!);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Please add valid temperature value.'))
+                );
+              }
+            },
+            child: Text('Save'),
+          ),
+        ],
+      );
+    },
+  );
+}
+Future<void> addTemperatureData(DateTime date, double temperature) async {
+  setState(() {
+    isLoading = true;
+  });
+
+  try {
+    await dataProvider.insertTemperatureData(date, temperature);
+    
+    // Daten neu laden und analysieren
+    await loadTemperatureData();
+    
+    temperatureData = cyclePhasePredictor.analyzeCurrentCycle(temperatureList);
+    temperatureData = cyclePhasePredictor.predictFutureCyclePhases(temperatureData, 3);
+  } catch (e) {
+    print('Fehler beim Hinzufügen: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() {
+      isLoading = false;
+    });
+  }
+}
+
   @override
   Widget build(BuildContext context) {
+      temperatureList.sort((a, b) => b.date.compareTo(a.date));
     return Scaffold(
       appBar: AppBar(
         title: Text('Past Measurements'),
@@ -241,8 +356,14 @@ class MeasurementsPageState extends State<MeasurementsPage> {
             tooltip: 'Generate test data',
             onPressed: _showAddRandomDataDialog,
           ),
+          IconButton(
+            icon: Icon(Icons.add),
+            tooltip: 'Add measurement',
+            onPressed: _showAddMeasurementDialog,
+          ),
         ],
       ),
+      
       body: Column(
         children: [
           Expanded(

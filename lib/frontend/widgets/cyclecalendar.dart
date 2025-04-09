@@ -68,18 +68,21 @@ class CycleCalendarWidgetState extends State<CycleCalendarWidget> {
                     }
                   );
 
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: dayData.cyclePhase.getColor().withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        date.day.toString(),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontWeight: date.isSameDay(DateTime.now()) ? FontWeight.bold : FontWeight.normal,
+                  return Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: dayData.cyclePhase.getColor().withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          date.day.toString(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.black87,
+                            fontWeight: date.isSameDay(DateTime.now()) ? FontWeight.bold : FontWeight.normal,
+                          ),
                         ),
                       ),
                     ),
